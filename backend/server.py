@@ -184,9 +184,9 @@ class MatiereCreate(BaseModel):
 
 class BulletinRequest(BaseModel):
     eleve_id: str
-    trimestre: str = Field(regex="^(T1|T2|T3)$")
+    trimestre: str = Field(pattern="^(T1|T2|T3)$")
     annee_scolaire: str = Field(default="2024-2025")
-    format_export: str = Field(default="pdf", regex="^(pdf|csv)$")
+    format_export: str = Field(default="pdf", pattern="^(pdf|csv)$")
 
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
