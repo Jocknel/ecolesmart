@@ -1442,8 +1442,8 @@ const NotesComponent = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [showCreateNote, setShowCreateNote] = useState(false);
   const [showCreateMatiere, setShowCreateMatiere] = useState(false);
-  const [selectedEleve, setSelectedEleve] = useState('');
-  const [selectedTrimestre, setSelectedTrimestre] = useState('');
+  const [selectedEleve, setSelectedEleve] = useState('all');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('all');
   
   const [noteFormData, setNoteFormData] = useState({
     eleve_id: '',
@@ -1908,8 +1908,8 @@ const NotesComponent = ({ user }) => {
 // Composant Bulletins
 const BulletinsComponent = ({ user }) => {
   const [eleves, setEleves] = useState([]);
-  const [selectedEleve, setSelectedEleve] = useState('');
-  const [selectedTrimestre, setSelectedTrimestre] = useState('');
+  const [selectedEleve, setSelectedEleve] = useState('all');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('all');
   const [bulletinData, setBulletinData] = useState(null);
   const [loading, setLoading] = useState(false);
 
