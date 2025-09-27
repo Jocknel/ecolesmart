@@ -67,10 +67,12 @@ class ClasseLevel(str):
 class UserCreate(BaseModel):
     email: EmailStr
     mot_de_passe: str = Field(min_length=6)
+    confirmer_mot_de_passe: str = Field(min_length=6)
     nom: str = Field(min_length=2, max_length=100)
     prenoms: str = Field(min_length=2, max_length=200)
     role: str = Field(default=UserRole.PARENT)
     telephone: Optional[str] = None
+    code_admin: Optional[str] = None  # Code spécial pour créer un admin
     
     @validator('telephone')
     def validate_phone(cls, v):
