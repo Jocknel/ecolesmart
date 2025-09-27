@@ -2573,6 +2573,7 @@ const App = () => {
           {activeTab === 'eleves' && <ElevesComponent user={user} />}
           {activeTab === 'notes' && <NotesComponent user={user} />}
           {activeTab === 'bulletins' && <BulletinsComponent user={user} />}
+          {activeTab === 'calendrier' && <CalendrierComponent user={user} />}
           {activeTab === 'factures' && <FacturesComponent user={user} />}
           {activeTab === 'paiements' && <PaiementsComponent user={user} />}
           {activeTab === 'presences' && <PresencesComponent user={user} />}
