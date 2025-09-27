@@ -1180,6 +1180,106 @@ def generer_appreciation(moyenne_generale: float) -> str:
     else:
         return "Travail très insuffisant. Aide et soutien nécessaires."
 
+# Routes de gestion du calendrier académique
+@api_router.post("/calendrier/evenements")
+async def create_evenement(evenement_data: EvenementCreate, current_user: dict = Depends(get_current_user)):
+    """Créer un événement dans le calendrier"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    evenement_doc = {
+        "_id": str(uuid.uuid4()),
+        "titre": evenement_data.titre,
+        "description": evenement_data.description,
+        "date_debut": evenement_data.date_debut.isoformat(),
+        "date_fin": evenement_data.date_fin.isoformat() if evenement_data.date_fin else None,
+        "type_evenement": evenement_data.type_evenement,
+        "classe": evenement_data.classe,
+        "matiere": evenement_data.matiere,
+        "createur_id": current_user["_id"],
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.evenements_calendrier.insert_one(evenement_doc)
+    
+    return {"message": "Événement créé avec succès", "evenement": evenement_doc}
+
+@api_router.get("/calendrier/evenements")
+async def list_evenements(
+    mois: Optional[int] = None,
+    annee: int = Query(default=2025, ge=2020, le=2030),
+    classe: Optional[str] = None,
+    type_evenement: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste des événements du calendrier"""
+    filter_query = {}
+    
+    if mois and annee:
+        # Filtrer par mois et année
+        debut_mois = datetime(annee, mois, 1, tzinfo=timezone.utc)
+        if mois == 12:
+            fin_mois = datetime(annee + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            fin_mois = datetime(annee, mois + 1, 1, tzinfo=timezone.utc)
+        
+        filter_query["date_debut"] = {
+            "$gte": debut_mois.isoformat(),
+            "$lt": fin_mois.isoformat()
+        }
+    
+    if classe:
+        filter_query["$or"] = [
+            {"classe": classe},
+            {"classe": None}  # Événements pour toutes les classes
+        ]
+    
+    if type_evenement:
+        filter_query["type_evenement"] = type_evenement
+    
+    cursor = db.evenements_calendrier.find(filter_query).sort("date_debut", 1)
+    evenements = await cursor.to_list(length=None)
+    
+    for evenement in evenements:
+        evenement['_id'] = str(evenement['_id'])
+    
+    return {"evenements": evenements}
+
+@api_router.get("/calendrier/trimestres")
+async def get_trimestres_info(annee_scolaire: str = "2024-2025"):
+    """Information sur les trimestres"""
+    trimestres = {
+        "2024-2025": [
+            {
+                "nom": "Trimestre 1",
+                "code": "T1",
+                "debut": "2024-09-01",
+                "fin": "2024-12-20",
+                "vacances": "2024-12-21 - 2025-01-06"
+            },
+            {
+                "nom": "Trimestre 2", 
+                "code": "T2",
+                "debut": "2025-01-07",
+                "fin": "2025-04-04",
+                "vacances": "2025-04-05 - 2025-04-21"
+            },
+            {
+                "nom": "Trimestre 3",
+                "code": "T3", 
+                "debut": "2025-04-22",
+                "fin": "2025-07-04",
+                "vacances": "2025-07-05 - 2025-08-31"
+            }
+        ]
+    }
+    
+    return {
+        "annee_scolaire": annee_scolaire,
+        "trimestres": trimestres.get(annee_scolaire, [])
+    }
+
 # Routes de gestion des présences
 @api_router.post("/presences")
 async def create_presence(presence_data: PresenceCreate, current_user: dict = Depends(get_current_user)):
