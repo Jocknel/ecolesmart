@@ -85,8 +85,9 @@ class UserCreate(BaseModel):
     @model_validator(mode='after')
     def validate_admin_role(self):
         if self.role == 'administrateur':
-            # Seul un code admin spécial permet de créer un administrateur
-            if self.code_admin != 'ADMIN_ECOLE_2024':
+            # Permettre la création du premier administrateur ou avec le code spécial
+            valid_codes = ['ADMIN_ECOLE_2024', 'PREMIER_ADMIN_2024']
+            if self.code_admin not in valid_codes:
                 raise ValueError('Code administrateur requis pour ce rôle')
         elif self.role not in ['parent', 'enseignant', 'administrateur']:
             raise ValueError('Rôle non autorisé pour l\'inscription publique')
