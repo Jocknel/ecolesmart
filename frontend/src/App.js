@@ -270,6 +270,11 @@ const Sidebar = ({ activeTab, setActiveTab, user, onLogout }) => {
     { id: 'presences', label: 'Présences', icon: ClipboardCheck }
   ];
 
+  // Ajouter l'item admin seulement pour les administrateurs
+  if (user.role === 'administrateur') {
+    menuItems.push({ id: 'admin', label: 'Administration', icon: AlertCircle });
+  }
+
   return (
     <div className="w-64 bg-white border-r border-gray-200 h-screen">
       <div className="p-6 border-b border-gray-200">
