@@ -1431,23 +1431,65 @@ const App = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérification du token au démarrage
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        setUser(userData);
-      } catch (error) {
-        console.error('Erreur parsing user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    const processGoogleAuth = async () => {
+      // Vérifier s'il y a un session_id dans le fragment URL (retour Google)
+      const urlFragment = window.location.hash;
+      const sessionIdMatch = urlFragment.match(/session_id=([^&]+)/);
+      
+      if (sessionIdMatch) {
+        const sessionId = sessionIdMatch[1];
+        setLoading(true);
+        
+        try {
+          console.log('Traitement session Google...', sessionId);
+          
+          // Appeler notre API pour traiter la session Google
+          const response = await axios.post('/auth/google/session', {
+            session_id: sessionId
+          });
+          
+          if (response.data.access_token) {
+            localStorage.setItem('token', response.data.access_token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+            
+            setUser(response.data.user);
+            
+            // Nettoyer l'URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            console.log('Connexion Google réussie!');
+          }
+        } catch (error) {
+          console.error('Erreur authentification Google:', error);
+          // Nettoyer l'URL même en cas d'erreur
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        setLoading(false);
+        return;
       }
-    }
+      
+      // Vérification du token existant au démarrage
+      const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      
+      if (token && savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          setUser(userData);
+        } catch (error) {
+          console.error('Erreur parsing user data:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+      
+      setLoading(false);
+    };
     
-    setLoading(false);
+    processGoogleAuth();
   }, []);
 
   const handleAuthSuccess = (userData) => {
