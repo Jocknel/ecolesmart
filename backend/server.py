@@ -91,7 +91,7 @@ class EleveCreate(BaseModel):
     nom: str = Field(min_length=2, max_length=100)
     prenoms: str = Field(min_length=2, max_length=200)
     date_naissance: date
-    sexe: str = Field(regex="^(masculin|feminin)$")
+    sexe: str = Field(pattern="^(masculin|feminin)$")
     classe: str
     telephone_parent: Optional[str] = None
     adresse: Optional[str] = None
