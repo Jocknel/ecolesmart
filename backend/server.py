@@ -74,6 +74,23 @@ class UserCreate(BaseModel):
     telephone: Optional[str] = None
     code_admin: Optional[str] = None  # Code spécial pour créer un admin
     
+    @validator('confirmer_mot_de_passe')
+    def validate_password_confirmation(cls, v, values):
+        if 'mot_de_passe' in values and v != values['mot_de_passe']:
+            raise ValueError('Les mots de passe ne correspondent pas')
+        return v
+    
+    @validator('role')
+    def validate_role(cls, v, values):
+        if v == 'administrateur':
+            # Seul un code admin spécial permet de créer un administrateur
+            code_admin = values.get('code_admin')
+            if code_admin != 'ADMIN_ECOLE_2024':
+                raise ValueError('Code administrateur requis pour ce rôle')
+        elif v not in ['parent', 'enseignant']:
+            raise ValueError('Rôle non autorisé pour l\'inscription publique')
+        return v
+    
     @validator('telephone')
     def validate_phone(cls, v):
         if v:
