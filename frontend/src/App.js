@@ -1434,6 +1434,683 @@ const PresencesComponent = ({ user }) => {
   );
 };
 
+// Composant Gestion des Notes et Moyennes
+const NotesComponent = ({ user }) => {
+  const [notes, setNotes] = useState([]);
+  const [matieres, setMatieres] = useState([]);
+  const [eleves, setEleves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateNote, setShowCreateNote] = useState(false);
+  const [showCreateMatiere, setShowCreateMatiere] = useState(false);
+  const [selectedEleve, setSelectedEleve] = useState('');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
+  
+  const [noteFormData, setNoteFormData] = useState({
+    eleve_id: '',
+    matiere: '',
+    type_evaluation: 'devoir',
+    note: '',
+    coefficient: '1.0',
+    date_evaluation: new Date().toISOString().split('T')[0],
+    trimestre: 'T1',
+    commentaire: ''
+  });
+
+  const [matiereFormData, setMatiereFormData] = useState({
+    nom: '',
+    code: '',
+    coefficient: '1.0',
+    couleur: '#3B82F6',
+    classes: []
+  });
+
+  const types_evaluation = ['devoir', 'composition', 'controle', 'examen', 'oral'];
+  const trimestres = ['T1', 'T2', 'T3'];
+  const classes = ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2', '6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Tle'];
+
+  useEffect(() => {
+    fetchNotes();
+    fetchMatieres();
+    fetchEleves();
+  }, [selectedEleve, selectedTrimestre]);
+
+  const fetchNotes = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedEleve) params.append('eleve_id', selectedEleve);
+      if (selectedTrimestre) params.append('trimestre', selectedTrimestre);
+      
+      const response = await axios.get(`/notes?${params.toString()}`);
+      setNotes(response.data.notes);
+    } catch (error) {
+      toast.error('Erreur lors du chargement des notes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMatieres = async () => {
+    try {
+      const response = await axios.get('/matieres');
+      setMatieres(response.data.matieres);
+    } catch (error) {
+      console.error('Erreur chargement matières:', error);
+    }
+  };
+
+  const fetchEleves = async () => {
+    try {
+      const response = await axios.get('/eleves');
+      setEleves(response.data.eleves);
+    } catch (error) {
+      console.error('Erreur chargement élèves:', error);
+    }
+  };
+
+  const handleCreateNote = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/notes', {
+        ...noteFormData,
+        note: parseFloat(noteFormData.note),
+        coefficient: parseFloat(noteFormData.coefficient)
+      });
+      toast.success('Note enregistrée avec succès');
+      setShowCreateNote(false);
+      setNoteFormData({
+        eleve_id: '',
+        matiere: '',
+        type_evaluation: 'devoir',
+        note: '',
+        coefficient: '1.0',
+        date_evaluation: new Date().toISOString().split('T')[0],
+        trimestre: 'T1',
+        commentaire: ''
+      });
+      fetchNotes();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'enregistrement');
+    }
+  };
+
+  const handleCreateMatiere = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/matieres', matiereFormData);
+      toast.success('Matière créée avec succès');
+      setShowCreateMatiere(false);
+      setMatiereFormData({
+        nom: '',
+        code: '',
+        coefficient: '1.0',
+        couleur: '#3B82F6',
+        classes: []
+      });
+      fetchMatieres();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la création');
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Chargement des notes...</div>;
+  }
+
+  return (
+    <div className="space-y-6" data-testid="notes-section">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Notes & Moyennes</h2>
+          <p className="text-gray-600 mt-2">Gestion des évaluations et calcul des moyennes</p>
+        </div>
+        
+        <div className="flex space-x-2">
+          {(user.role === 'administrateur' || user.role === 'enseignant') && (
+            <>
+              <Dialog open={showCreateMatiere} onOpenChange={setShowCreateMatiere}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="create-subject-btn">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouvelle Matière
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Créer une nouvelle matière</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateMatiere} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nom">Nom de la matière</Label>
+                      <Input
+                        id="nom"
+                        value={matiereFormData.nom}
+                        onChange={(e) => setMatiereFormData({...matiereFormData, nom: e.target.value})}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="code">Code matière</Label>
+                      <Input
+                        id="code"
+                        value={matiereFormData.code}
+                        onChange={(e) => setMatiereFormData({...matiereFormData, code: e.target.value.toUpperCase()})}
+                        placeholder="MATH, FRAN, ANG..."
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="coefficient">Coefficient</Label>
+                      <Input
+                        id="coefficient"
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="5"
+                        value={matiereFormData.coefficient}
+                        onChange={(e) => setMatiereFormData({...matiereFormData, coefficient: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setShowCreateMatiere(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                        Créer
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showCreateNote} onOpenChange={setShowCreateNote}>
+                <DialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700" data-testid="add-note-btn">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouvelle Note
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Saisir une nouvelle note</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateNote} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Élève</Label>
+                      <Select value={noteFormData.eleve_id} onValueChange={(value) => setNoteFormData({...noteFormData, eleve_id: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un élève" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eleves.map(eleve => (
+                            <SelectItem key={eleve._id} value={eleve._id}>
+                              {eleve.nom} {eleve.prenoms} - {eleve.classe}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Matière</Label>
+                      <Select value={noteFormData.matiere} onValueChange={(value) => setNoteFormData({...noteFormData, matiere: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une matière" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {matieres.map(matiere => (
+                            <SelectItem key={matiere._id} value={matiere.nom}>
+                              {matiere.nom} ({matiere.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Type d'évaluation</Label>
+                        <Select value={noteFormData.type_evaluation} onValueChange={(value) => setNoteFormData({...noteFormData, type_evaluation: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {types_evaluation.map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Trimestre</Label>
+                        <Select value={noteFormData.trimestre} onValueChange={(value) => setNoteFormData({...noteFormData, trimestre: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {trimestres.map(trimestre => (
+                              <SelectItem key={trimestre} value={trimestre}>{trimestre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="note">Note (/20)</Label>
+                        <Input
+                          id="note"
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          max="20"
+                          value={noteFormData.note}
+                          onChange={(e) => setNoteFormData({...noteFormData, note: e.target.value})}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="coefficient">Coefficient</Label>
+                        <Input
+                          id="coefficient"
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          max="5"
+                          value={noteFormData.coefficient}
+                          onChange={(e) => setNoteFormData({...noteFormData, coefficient: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="date_evaluation">Date d'évaluation</Label>
+                      <Input
+                        id="date_evaluation"
+                        type="date"
+                        value={noteFormData.date_evaluation}
+                        onChange={(e) => setNoteFormData({...noteFormData, date_evaluation: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="commentaire">Commentaire (optionnel)</Label>
+                      <Input
+                        id="commentaire"
+                        value={noteFormData.commentaire}
+                        onChange={(e) => setNoteFormData({...noteFormData, commentaire: e.target.value})}
+                        placeholder="Observation ou commentaire..."
+                      />
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setShowCreateNote(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                        Enregistrer
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Filtres */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-48">
+              <Label>Filtrer par élève</Label>
+              <Select value={selectedEleve} onValueChange={setSelectedEleve}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tous les élèves" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tous les élèves</SelectItem>
+                  {eleves.map(eleve => (
+                    <SelectItem key={eleve._id} value={eleve._id}>
+                      {eleve.nom} {eleve.prenoms} - {eleve.classe}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="min-w-32">
+              <Label>Trimestre</Label>
+              <Select value={selectedTrimestre} onValueChange={setSelectedTrimestre}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tous</SelectItem>
+                  {trimestres.map(trimestre => (
+                    <SelectItem key={trimestre} value={trimestre}>{trimestre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Liste des matières */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Matières ({matieres.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {matieres.map((matiere) => (
+                <div key={matiere._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div>
+                    <div className="font-medium">{matiere.nom}</div>
+                    <div className="text-sm text-gray-500">Code: {matiere.code} • Coef: {matiere.coefficient}</div>
+                  </div>
+                  <div
+                    className="w-4 h-4 rounded-full border-2 border-white shadow"
+                    style={{ backgroundColor: matiere.couleur }}
+                  ></div>
+                </div>
+              ))}
+              {matieres.length === 0 && (
+                <div className="text-center py-4 text-gray-500">
+                  Aucune matière créée
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Liste des notes */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Notes récentes ({notes.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Élève</TableHead>
+                    <TableHead>Matière</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Note</TableHead>
+                    <TableHead>Coef</TableHead>
+                    <TableHead>Trimestre</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {notes.map((note) => (
+                    <TableRow key={note._id}>
+                      <TableCell>
+                        {note.eleve ? (
+                          <div>
+                            <div className="font-medium">{note.eleve.nom} {note.eleve.prenoms}</div>
+                            <div className="text-sm text-gray-500">{note.eleve.classe}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Élève non trouvé</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{note.matiere}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {note.type_evaluation.charAt(0).toUpperCase() + note.type_evaluation.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={note.note >= 10 ? "default" : "destructive"}>
+                          {note.note}/20
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{note.coefficient}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{note.trimestre}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(note.date_evaluation).toLocaleDateString('fr-FR')}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {notes.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  Aucune note enregistrée
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// Composant Bulletins
+const BulletinsComponent = ({ user }) => {
+  const [eleves, setEleves] = useState([]);
+  const [selectedEleve, setSelectedEleve] = useState('');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
+  const [bulletinData, setBulletinData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const trimestres = ['T1', 'T2', 'T3'];
+
+  useEffect(() => {
+    fetchEleves();
+  }, []);
+
+  const fetchEleves = async () => {
+    try {
+      const response = await axios.get('/eleves');
+      setEleves(response.data.eleves);
+    } catch (error) {
+      console.error('Erreur chargement élèves:', error);
+    }
+  };
+
+  const genererBulletin = async () => {
+    if (!selectedEleve) {
+      toast.error('Veuillez sélectionner un élève');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post('/bulletins/generer', {
+        eleve_id: selectedEleve,
+        trimestre: selectedTrimestre,
+        format_export: 'pdf'
+      });
+      
+      setBulletinData(response.data.bulletin_data);
+      toast.success('Bulletin généré avec succès');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la génération du bulletin');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMoyenneColor = (moyenne) => {
+    if (moyenne >= 16) return 'text-green-600';
+    if (moyenne >= 14) return 'text-blue-600';
+    if (moyenne >= 12) return 'text-orange-600';
+    if (moyenne >= 10) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  return (
+    <div className="space-y-6" data-testid="bulletins-section">
+      <div>
+        <h2 className="text-3xl font-bold text-gray-900">Bulletins Scolaires</h2>
+        <p className="text-gray-600 mt-2">Génération et consultation des bulletins de notes</p>
+      </div>
+
+      {/* Générateur de bulletin */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Générer un Bulletin</CardTitle>
+          <CardDescription>Sélectionnez un élève et un trimestre</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Élève</Label>
+              <Select value={selectedEleve} onValueChange={setSelectedEleve}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un élève" />
+                </SelectTrigger>
+                <SelectContent>
+                  {eleves.map(eleve => (
+                    <SelectItem key={eleve._id} value={eleve._id}>
+                      {eleve.nom} {eleve.prenoms} - {eleve.classe}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Trimestre</Label>
+              <Select value={selectedTrimestre} onValueChange={setSelectedTrimestre}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {trimestres.map(trimestre => (
+                    <SelectItem key={trimestre} value={trimestre}>{trimestre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-end">
+              <Button 
+                onClick={genererBulletin}
+                disabled={loading || !selectedEleve}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                data-testid="generate-bulletin-btn"
+              >
+                {loading ? 'Génération...' : 'Générer Bulletin'}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Affichage du bulletin */}
+      {bulletinData && (
+        <Card>
+          <CardHeader className="bg-blue-50">
+            <CardTitle className="text-center text-xl">
+              BULLETIN SCOLAIRE - {bulletinData.trimestre} {bulletinData.annee_scolaire}
+            </CardTitle>
+            <div className="text-center space-y-1">
+              <p className="font-medium text-lg">
+                {bulletinData.eleve.nom} {bulletinData.eleve.prenoms}
+              </p>
+              <p className="text-gray-600">Classe: {bulletinData.eleve.classe}</p>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {/* Moyennes par matière */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-4">Résultats par Matière</h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Matière</TableHead>
+                      <TableHead>Nombre de Notes</TableHead>
+                      <TableHead>Moyenne</TableHead>
+                      <TableHead>Coefficient</TableHead>
+                      <TableHead>Points</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bulletinData.moyennes_par_matiere.map((matiere, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{matiere.matiere}</TableCell>
+                        <TableCell>{matiere.nb_notes}</TableCell>
+                        <TableCell className={`font-bold ${getMoyenneColor(matiere.moyenne)}`}>
+                          {matiere.moyenne}/20
+                        </TableCell>
+                        <TableCell>{matiere.coefficient_total}</TableCell>
+                        <TableCell>{(matiere.moyenne * matiere.coefficient_total).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Moyenne générale et appréciations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gray-50">
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-gray-700 mb-2">Moyenne Générale</h4>
+                    <div className={`text-3xl font-bold ${getMoyenneColor(bulletinData.moyenne_generale)}`}>
+                      {bulletinData.moyenne_generale}/20
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gray-50">
+                <CardContent className="p-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-2">Présences</h4>
+                    <div className="space-y-1 text-sm">
+                      <p>Total cours: {bulletinData.presences.total_cours}</p>
+                      <p>Absences: {bulletinData.presences.absences}</p>
+                      <p>Taux de présence: {bulletinData.presences.taux_presence}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Appréciation */}
+            <div className="mt-6">
+              <Card className="bg-blue-50">
+                <CardContent className="p-4">
+                  <h4 className="font-semibold text-gray-700 mb-2">Appréciation Générale</h4>
+                  <p className="text-gray-800">{bulletinData.appreciation}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="mt-6 text-right text-sm text-gray-500">
+              Bulletin généré le {new Date(bulletinData.date_generation).toLocaleString('fr-FR')}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
 // Composant Administration (réservé aux administrateurs)
 const AdministrationComponent = ({ user }) => {
   const [codeGenere, setCodeGenere] = useState(null);
