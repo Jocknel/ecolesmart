@@ -13,9 +13,11 @@ import logging
 import jwt
 import uuid
 import re
+import httpx
 from pathlib import Path
 from decimal import Decimal
 import asyncio
+from datetime import timezone
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
