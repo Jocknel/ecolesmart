@@ -76,7 +76,7 @@ class UserCreate(BaseModel):
     def validate_phone(cls, v):
         if v:
             clean_phone = re.sub(r"[\s\-\.]", "", v)
-            if not re.match(r"^(\+224|224)?[6-7][0-9]{7}$", clean_phone):
+            if not re.match(r"^(\+224|224)?[6-7][0-9]{8}$", clean_phone):
                 raise ValueError('Format de numéro guinéen invalide')
         return v
 
@@ -103,7 +103,7 @@ class EleveCreate(BaseModel):
     def validate_parent_phone(cls, v):
         if v:
             clean_phone = re.sub(r"[\s\-\.]", "", v)
-            if not re.match(r"^(\+224|224)?[6-7][0-9]{7}$", clean_phone):
+            if not re.match(r"^(\+224|224)?[6-7][0-9]{8}$", clean_phone):
                 raise ValueError('Format de numéro guinéen invalide')
         return v
 
