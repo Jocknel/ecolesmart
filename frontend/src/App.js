@@ -1477,8 +1477,8 @@ const NotesComponent = ({ user }) => {
   const fetchNotes = async () => {
     try {
       const params = new URLSearchParams();
-      if (selectedEleve) params.append('eleve_id', selectedEleve);
-      if (selectedTrimestre) params.append('trimestre', selectedTrimestre);
+      if (selectedEleve && selectedEleve !== 'all') params.append('eleve_id', selectedEleve);
+      if (selectedTrimestre && selectedTrimestre !== 'all') params.append('trimestre', selectedTrimestre);
       
       const response = await axios.get(`/notes?${params.toString()}`);
       setNotes(response.data.notes);
