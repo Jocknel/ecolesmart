@@ -25,10 +25,12 @@ const AuthComponent = ({ onAuthSuccess }) => {
   const [formData, setFormData] = useState({
     email: '',
     mot_de_passe: '',
+    confirmer_mot_de_passe: '',
     nom: '',
     prenoms: '',
     role: 'parent',
-    telephone: ''
+    telephone: '',
+    code_admin: ''
   });
   const [loading, setLoading] = useState(false);
 
