@@ -1909,7 +1909,7 @@ const NotesComponent = ({ user }) => {
 const BulletinsComponent = ({ user }) => {
   const [eleves, setEleves] = useState([]);
   const [selectedEleve, setSelectedEleve] = useState('all');
-  const [selectedTrimestre, setSelectedTrimestre] = useState('all');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
   const [bulletinData, setBulletinData] = useState(null);
   const [loading, setLoading] = useState(false);
 
