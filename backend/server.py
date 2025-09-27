@@ -82,16 +82,15 @@ class UserCreate(BaseModel):
             raise ValueError('Les mots de passe ne correspondent pas')
         return v
     
-    @validator('role')
-    def validate_role(cls, v, values, **kwargs):
-        if v == 'administrateur':
+    @model_validator(mode='after')
+    def validate_admin_role(self):
+        if self.role == 'administrateur':
             # Seul un code admin spécial permet de créer un administrateur
-            code_admin = values.get('code_admin')
-            if code_admin != 'ADMIN_ECOLE_2024':
+            if self.code_admin != 'ADMIN_ECOLE_2024':
                 raise ValueError('Code administrateur requis pour ce rôle')
-        elif v not in ['parent', 'enseignant']:
+        elif self.role not in ['parent', 'enseignant', 'administrateur']:
             raise ValueError('Rôle non autorisé pour l\'inscription publique')
-        return v
+        return self
     
     @validator('telephone')
     def validate_phone(cls, v):
