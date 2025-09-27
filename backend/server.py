@@ -836,6 +836,33 @@ async def simulate_payment_success(paiement_id: str, current_user: dict = Depend
         "montant_restant": max(0, nouveau_montant_restant)
     }
 
+@api_router.post("/admin/generer-code-admin")
+async def generer_code_admin(current_user: dict = Depends(get_current_user)):
+    """Génère un code temporaire pour créer un administrateur (réservé aux admins)"""
+    if current_user["role"] != "administrateur":
+        raise HTTPException(status_code=403, detail="Accès refusé - Administrateur seulement")
+    
+    # Génération d'un code temporaire valide 1 heure
+    code_temporaire = f"ADMIN_{datetime.now().strftime('%Y%m%d_%H%M')}_{uuid.uuid4().hex[:6].upper()}"
+    expiration = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Stocker le code temporaire dans la base de données
+    await db.codes_admin_temp.insert_one({
+        "_id": str(uuid.uuid4()),
+        "code": code_temporaire,
+        "genere_par": current_user["email"],
+        "date_creation": datetime.now(timezone.utc),
+        "date_expiration": expiration,
+        "utilise": False
+    })
+    
+    return {
+        "code_temporaire": code_temporaire,
+        "valide_jusqu": expiration.isoformat(),
+        "duree_validite": "1 heure",
+        "message": f"Code généré par {current_user['nom']} {current_user['prenoms']}"
+    }
+
 # Routes de gestion des présences
 @api_router.post("/presences")
 async def create_presence(presence_data: PresenceCreate, current_user: dict = Depends(get_current_user)):
