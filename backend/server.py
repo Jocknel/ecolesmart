@@ -1283,38 +1283,246 @@ async def list_evenements(
     
     return {"evenements": evenements}
 
-@api_router.get("/calendrier/trimestres")
-async def get_trimestres_info(annee_scolaire: str = "2024-2025"):
-    """Information sur les trimestres"""
-    trimestres = {
-        "2024-2025": [
-            {
-                "nom": "Trimestre 1",
-                "code": "T1",
-                "debut": "2024-09-01",
-                "fin": "2024-12-20",
-                "vacances": "2024-12-21 - 2025-01-06"
-            },
-            {
-                "nom": "Trimestre 2", 
-                "code": "T2",
-                "debut": "2025-01-07",
-                "fin": "2025-04-04",
-                "vacances": "2025-04-05 - 2025-04-21"
-            },
-            {
-                "nom": "Trimestre 3",
-                "code": "T3", 
-                "debut": "2025-04-22",
-                "fin": "2025-07-04",
-                "vacances": "2025-07-05 - 2025-08-31"
-            }
-        ]
+# Routes de gestion des trimestres
+@api_router.post("/trimestres")
+async def create_trimestre(trimestre_data: TrimestreCreate, current_user: dict = Depends(get_current_user)):
+    """Créer un nouveau trimestre"""
+    if current_user["role"] != "administrateur":
+        raise HTTPException(status_code=403, detail="Accès refusé - Administrateur seulement")
+    
+    # Vérifier si le trimestre existe déjà pour cette année scolaire
+    existing = await db.trimestres.find_one({
+        "code": trimestre_data.code,
+        "annee_scolaire": trimestre_data.annee_scolaire
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Le {trimestre_data.code} existe déjà pour {trimestre_data.annee_scolaire}")
+    
+    trimestre_doc = {
+        "_id": str(uuid.uuid4()),
+        "nom": trimestre_data.nom,
+        "code": trimestre_data.code,
+        "date_debut": trimestre_data.date_debut.isoformat(),
+        "date_fin": trimestre_data.date_fin.isoformat(),
+        "date_debut_vacances": trimestre_data.date_debut_vacances.isoformat() if trimestre_data.date_debut_vacances else None,
+        "date_fin_vacances": trimestre_data.date_fin_vacances.isoformat() if trimestre_data.date_fin_vacances else None,
+        "annee_scolaire": trimestre_data.annee_scolaire,
+        "actif": trimestre_data.actif,
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
     }
     
+    await db.trimestres.insert_one(trimestre_doc)
+    
+    return {"message": "Trimestre créé avec succès", "trimestre": trimestre_doc}
+
+@api_router.get("/trimestres")
+async def list_trimestres(
+    annee_scolaire: str = "2024-2025",
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste des trimestres personnalisés ou par défaut"""
+    
+    # Chercher les trimestres personnalisés d'abord
+    cursor = db.trimestres.find({"annee_scolaire": annee_scolaire}).sort("code", 1)
+    trimestres_custom = await cursor.to_list(length=None)
+    
+    if trimestres_custom:
+        # Utiliser les trimestres personnalisés
+        for trimestre in trimestres_custom:
+            trimestre['_id'] = str(trimestre['_id'])
+        return {"trimestres": trimestres_custom, "source": "personnalisé"}
+    
+    # Sinon, utiliser les trimestres par défaut
+    trimestres_default = [
+        {
+            "nom": "Trimestre 1",
+            "code": "T1",
+            "date_debut": "2024-09-01",
+            "date_fin": "2024-12-20",
+            "date_debut_vacances": "2024-12-21",
+            "date_fin_vacances": "2025-01-06",
+            "annee_scolaire": annee_scolaire,
+            "actif": True
+        },
+        {
+            "nom": "Trimestre 2", 
+            "code": "T2",
+            "date_debut": "2025-01-07",
+            "date_fin": "2025-04-04",
+            "date_debut_vacances": "2025-04-05",
+            "date_fin_vacances": "2025-04-21",
+            "annee_scolaire": annee_scolaire,
+            "actif": True
+        },
+        {
+            "nom": "Trimestre 3",
+            "code": "T3", 
+            "date_debut": "2025-04-22",
+            "date_fin": "2025-07-04",
+            "date_debut_vacances": "2025-07-05",
+            "date_fin_vacances": "2025-08-31",
+            "annee_scolaire": annee_scolaire,
+            "actif": True
+        }
+    ]
+    
+    return {"trimestres": trimestres_default, "source": "défaut"}
+
+# Routes de gestion des créneaux horaires
+@api_router.post("/creneaux")
+async def create_creneau(creneau_data: CreneauHoraireCreate, current_user: dict = Depends(get_current_user)):
+    """Créer un nouveau créneau horaire"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    creneau_doc = {
+        "_id": str(uuid.uuid4()),
+        "nom": creneau_data.nom,
+        "heure_debut": creneau_data.heure_debut,
+        "heure_fin": creneau_data.heure_fin,
+        "type_creneau": creneau_data.type_creneau,
+        "ordre": creneau_data.ordre,
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.creneaux_horaires.insert_one(creneau_doc)
+    
+    return {"message": "Créneau créé avec succès", "creneau": creneau_doc}
+
+@api_router.get("/creneaux")
+async def list_creneaux(current_user: dict = Depends(get_current_user)):
+    """Liste des créneaux horaires"""
+    
+    # Chercher les créneaux personnalisés
+    cursor = db.creneaux_horaires.find().sort("ordre", 1)
+    creneaux_custom = await cursor.to_list(length=None)
+    
+    if creneaux_custom:
+        for creneau in creneaux_custom:
+            creneau['_id'] = str(creneau['_id'])
+        return {"creneaux": creneaux_custom, "source": "personnalisé"}
+    
+    # Créneaux par défaut si aucun n'existe
+    creneaux_default = [
+        {"nom": "1ère heure", "heure_debut": "08:00", "heure_fin": "08:55", "type_creneau": "cours", "ordre": 1},
+        {"nom": "Récréation", "heure_debut": "08:55", "heure_fin": "09:10", "type_creneau": "recreation", "ordre": 2},
+        {"nom": "2ème heure", "heure_debut": "09:10", "heure_fin": "10:05", "type_creneau": "cours", "ordre": 3},
+        {"nom": "3ème heure", "heure_debut": "10:05", "heure_fin": "11:00", "type_creneau": "cours", "ordre": 4},
+        {"nom": "Récréation", "heure_debut": "11:00", "heure_fin": "11:15", "type_creneau": "recreation", "ordre": 5},
+        {"nom": "4ème heure", "heure_debut": "11:15", "heure_fin": "12:10", "type_creneau": "cours", "ordre": 6},
+        {"nom": "Pause déjeuner", "heure_debut": "12:10", "heure_fin": "14:00", "type_creneau": "pause", "ordre": 7},
+        {"nom": "5ème heure", "heure_debut": "14:00", "heure_fin": "14:55", "type_creneau": "cours", "ordre": 8},
+        {"nom": "6ème heure", "heure_debut": "14:55", "heure_fin": "15:50", "type_creneau": "cours", "ordre": 9}
+    ]
+    
+    return {"creneaux": creneaux_default, "source": "défaut"}
+
+# Routes de gestion des emplois du temps
+@api_router.post("/emplois-du-temps")
+async def create_emploi_du_temps(emploi_data: EmploiDuTempsCreate, current_user: dict = Depends(get_current_user)):
+    """Créer un créneau dans l'emploi du temps"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # Vérifier les conflits (même classe, même créneau horaire)
+    conflit = await db.emplois_du_temps.find_one({
+        "classe": emploi_data.classe,
+        "jour_semaine": emploi_data.jour_semaine,
+        "heure_debut": emploi_data.heure_debut,
+        "heure_fin": emploi_data.heure_fin
+    })
+    
+    if conflit:
+        raise HTTPException(status_code=400, detail="Conflit d'horaire : un cours existe déjà à ce créneau")
+    
+    emploi_doc = {
+        "_id": str(uuid.uuid4()),
+        "classe": emploi_data.classe,
+        "jour_semaine": emploi_data.jour_semaine,
+        "heure_debut": emploi_data.heure_debut,
+        "heure_fin": emploi_data.heure_fin,
+        "matiere": emploi_data.matiere,
+        "enseignant_id": emploi_data.enseignant_id,
+        "salle": emploi_data.salle,
+        "type_cours": emploi_data.type_cours,
+        "couleur": emploi_data.couleur,
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.emplois_du_temps.insert_one(emploi_doc)
+    
+    return {"message": "Cours ajouté à l'emploi du temps", "cours": emploi_doc}
+
+@api_router.get("/emplois-du-temps")
+async def get_emploi_du_temps(
+    classe: Optional[str] = None,
+    enseignant_id: Optional[str] = None,
+    jour_semaine: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupérer l'emploi du temps"""
+    
+    filter_query = {}
+    
+    if classe:
+        filter_query["classe"] = classe
+    
+    if enseignant_id:
+        filter_query["enseignant_id"] = enseignant_id
+    
+    if jour_semaine:
+        filter_query["jour_semaine"] = jour_semaine
+    
+    # Pipeline pour inclure les infos enseignant
+    pipeline = [
+        {"$match": filter_query},
+        {"$lookup": {
+            "from": "users",
+            "localField": "enseignant_id",
+            "foreignField": "_id",
+            "as": "enseignant"
+        }},
+        {"$unwind": {"path": "$enseignant", "preserveNullAndEmptyArrays": True}},
+        {"$sort": {"jour_semaine": 1, "heure_debut": 1}}
+    ]
+    
+    cursor = db.emplois_du_temps.aggregate(pipeline)
+    emploi_du_temps = await cursor.to_list(length=None)
+    
+    # Conversion des ObjectIds
+    for cours in emploi_du_temps:
+        cours['_id'] = str(cours['_id'])
+        if 'enseignant' in cours and cours['enseignant']:
+            cours['enseignant']['_id'] = str(cours['enseignant']['_id'])
+            # Supprimer le mot de passe de la réponse
+            cours['enseignant'].pop('mot_de_passe', None)
+    
+    return {"emploi_du_temps": emploi_du_temps}
+
+@api_router.delete("/emplois-du-temps/{cours_id}")
+async def delete_cours_emploi(cours_id: str, current_user: dict = Depends(get_current_user)):
+    """Supprimer un cours de l'emploi du temps"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    result = await db.emplois_du_temps.delete_one({"_id": cours_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cours introuvable")
+    
+    return {"message": "Cours supprimé de l'emploi du temps"}
+
+@api_router.get("/calendrier/trimestres")
+async def get_trimestres_info(annee_scolaire: str = "2024-2025"):
+    """Information sur les trimestres (compatibilité)"""
+    response = await list_trimestres(annee_scolaire, current_user=None)
     return {
         "annee_scolaire": annee_scolaire,
-        "trimestres": trimestres.get(annee_scolaire, [])
+        "trimestres": response["trimestres"]
     }
 
 # Routes de gestion des présences
