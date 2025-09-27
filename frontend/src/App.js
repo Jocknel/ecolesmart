@@ -1429,6 +1429,150 @@ const PresencesComponent = ({ user }) => {
   );
 };
 
+// Composant Administration (réservé aux administrateurs)
+const AdministrationComponent = ({ user }) => {
+  const [codeGenere, setCodeGenere] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const genererCodeAdmin = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post('/admin/generer-code-admin');
+      setCodeGenere(response.data);
+      toast.success('Code administrateur généré avec succès!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la génération du code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copierCode = () => {
+    if (codeGenere) {
+      navigator.clipboard.writeText(codeGenere.code_temporaire);
+      toast.success('Code copié dans le presse-papier!');
+    }
+  };
+
+  return (
+    <div className="space-y-6" data-testid="admin-section">
+      <div>
+        <h2 className="text-3xl font-bold text-gray-900">Administration</h2>
+        <p className="text-gray-600 mt-2">Outils de gestion et configuration système</p>
+      </div>
+
+      {/* Génération de codes administrateur */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
+            Gestion des Codes Administrateur
+          </CardTitle>
+          <CardDescription>
+            Générez des codes temporaires pour permettre la création de nouveaux comptes administrateurs
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 mr-2" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-800">Sécurité</p>
+                <p className="text-yellow-700 mt-1">
+                  Les codes générés sont valides pendant 1 heure et ne peuvent être utilisés qu'une seule fois.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button 
+            onClick={genererCodeAdmin}
+            disabled={loading}
+            className="bg-orange-600 hover:bg-orange-700"
+            data-testid="generate-admin-code-btn"
+          >
+            {loading ? 'Génération...' : 'Générer un Code Administrateur'}
+          </Button>
+
+          {codeGenere && (
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium text-green-800">Code Administrateur Généré</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Input
+                        value={codeGenere.code_temporaire}
+                        readOnly
+                        className="font-mono text-sm bg-white border-green-300"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={copierCode}
+                        className="border-green-300 text-green-700 hover:bg-green-100"
+                      >
+                        Copier
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-green-800">Valide jusqu'à:</span>
+                      <p className="text-green-700">
+                        {new Date(codeGenere.valide_jusqu).toLocaleString('fr-FR')}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-green-800">Durée:</span>
+                      <p className="text-green-700">{codeGenere.duree_validite}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-green-600 bg-green-100 p-2 rounded">
+                    {codeGenere.message}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="text-sm text-gray-600 space-y-2">
+            <p><strong>Instructions:</strong></p>
+            <ol className="list-decimal list-inside space-y-1 ml-4">
+              <li>Cliquez sur "Générer un Code Administrateur"</li>
+              <li>Copiez le code généré</li>
+              <li>Transmettez le code à la personne qui doit créer un compte administrateur</li>
+              <li>Le code doit être utilisé dans l'heure qui suit sa génération</li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Codes fixes disponibles */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Codes Administrateur Fixes</CardTitle>
+          <CardDescription>Codes permanents pour la création d'administrateurs</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+              <code className="font-mono">ADMIN_ECOLE_2024</code>
+              <Badge variant="outline">Permanent</Badge>
+            </div>
+            <p className="text-gray-600 text-xs mt-2">
+              Ce code peut être utilisé de façon permanente pour créer des comptes administrateurs. 
+              Conservez-le en sécurité.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Composant principal de l'application
 const App = () => {
   const [user, setUser] = useState(null);
