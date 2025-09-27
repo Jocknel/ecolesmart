@@ -268,6 +268,8 @@ const Sidebar = ({ activeTab, setActiveTab, user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: BookOpen },
     { id: 'eleves', label: 'Élèves', icon: Users },
+    { id: 'notes', label: 'Notes & Moyennes', icon: BookOpen },
+    { id: 'bulletins', label: 'Bulletins', icon: FileText },
     { id: 'factures', label: 'Factures', icon: FileText },
     { id: 'paiements', label: 'Paiements', icon: CreditCard },
     { id: 'presences', label: 'Présences', icon: ClipboardCheck }
