@@ -188,6 +188,15 @@ class BulletinRequest(BaseModel):
     annee_scolaire: str = Field(default="2024-2025")
     format_export: str = Field(default="pdf", pattern="^(pdf|csv)$")
 
+class EvenementCreate(BaseModel):
+    titre: str = Field(min_length=3, max_length=200)
+    description: Optional[str] = None
+    date_debut: date
+    date_fin: Optional[date] = None
+    type_evenement: str = Field(pattern="^(cours|examen|vacances|reunion|activite|autre)$")
+    classe: Optional[str] = None  # Si spécifique à une classe
+    matiere: Optional[str] = None  # Si spécifique à une matière
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
