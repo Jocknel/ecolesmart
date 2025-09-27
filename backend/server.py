@@ -197,6 +197,43 @@ class EvenementCreate(BaseModel):
     classe: Optional[str] = None  # Si spécifique à une classe
     matiere: Optional[str] = None  # Si spécifique à une matière
 
+class TrimestreCreate(BaseModel):
+    nom: str = Field(min_length=3, max_length=50)
+    code: str = Field(pattern="^(T1|T2|T3)$")
+    date_debut: date
+    date_fin: date
+    date_debut_vacances: Optional[date] = None
+    date_fin_vacances: Optional[date] = None
+    annee_scolaire: str = Field(default="2024-2025")
+    actif: bool = Field(default=True)
+
+class EmploiDuTempsCreate(BaseModel):
+    classe: str
+    jour_semaine: int = Field(ge=1, le=7)  # 1=Lundi, 7=Dimanche
+    heure_debut: str = Field(pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")  # Format HH:MM
+    heure_fin: str = Field(pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+    matiere: str
+    enseignant_id: Optional[str] = None
+    salle: Optional[str] = None
+    type_cours: str = Field(default="cours", pattern="^(cours|td|tp|evaluation|soutien)$")
+    couleur: str = Field(default="#3B82F6")
+    
+    @validator('heure_fin')
+    def validate_heures(cls, v, values):
+        if 'heure_debut' in values:
+            debut = datetime.strptime(values['heure_debut'], '%H:%M').time()
+            fin = datetime.strptime(v, '%H:%M').time()
+            if fin <= debut:
+                raise ValueError('L\'heure de fin doit être après l\'heure de début')
+        return v
+
+class CreneauHoraireCreate(BaseModel):
+    nom: str = Field(min_length=2, max_length=50)  # Ex: "1ère heure", "Récréation"
+    heure_debut: str = Field(pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+    heure_fin: str = Field(pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
+    type_creneau: str = Field(default="cours", pattern="^(cours|pause|recreation)$")
+    ordre: int = Field(ge=1, le=20)  # Position dans la journée
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
