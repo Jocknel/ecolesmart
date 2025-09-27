@@ -93,7 +93,7 @@ class UserCreate(BaseModel):
                 # Validation des codes temporaires sera faite dans la route register
                 if not self.code_admin or not self.code_admin.startswith('ADMIN_'):
                     raise ValueError('Code administrateur requis pour ce rôle')
-        elif self.role not in ['parent', 'enseignant', 'administrateur']:
+        elif self.role not in ['parent', 'enseignant', 'eleve', 'administrateur']:
             raise ValueError('Rôle non autorisé pour l\'inscription publique')
         return self
     
