@@ -1797,7 +1797,7 @@ const NotesComponent = ({ user }) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous</SelectItem>
+                  <SelectItem value="all">Tous</SelectItem>
                   {trimestres.map(trimestre => (
                     <SelectItem key={trimestre} value={trimestre}>{trimestre}</SelectItem>
                   ))}
