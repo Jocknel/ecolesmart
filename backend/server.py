@@ -163,6 +163,31 @@ class PresenceCreate(BaseModel):
     present: bool = True
     motif_absence: Optional[str] = None
 
+class NoteCreate(BaseModel):
+    eleve_id: str
+    matiere: str
+    type_evaluation: str = Field(regex="^(devoir|composition|controle|examen|oral)$")
+    note: float = Field(ge=0, le=20)  # Notes sur 20
+    coefficient: float = Field(default=1.0, ge=0.5, le=5.0)
+    date_evaluation: date
+    trimestre: str = Field(regex="^(T1|T2|T3)$")
+    annee_scolaire: str = Field(default="2024-2025")
+    commentaire: Optional[str] = None
+
+class MatiereCreate(BaseModel):
+    nom: str = Field(min_length=2, max_length=100)
+    code: str = Field(min_length=2, max_length=20)
+    coefficient: float = Field(default=1.0, ge=0.5, le=5.0)
+    enseignant_id: Optional[str] = None
+    classes: List[str] = Field(default=[])
+    couleur: str = Field(default="#3B82F6")
+
+class BulletinRequest(BaseModel):
+    eleve_id: str
+    trimestre: str = Field(regex="^(T1|T2|T3)$")
+    annee_scolaire: str = Field(default="2024-2025")
+    format_export: str = Field(default="pdf", regex="^(pdf|csv)$")
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
