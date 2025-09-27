@@ -1447,8 +1447,8 @@ const NotesComponent = ({ user }) => {
   const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
   
   const [noteFormData, setNoteFormData] = useState({
-    eleve_id: '',
-    matiere: '',
+    eleve_id: 'none',
+    matiere: 'none',
     type_evaluation: 'devoir',
     note: '',
     coefficient: '1.0',
