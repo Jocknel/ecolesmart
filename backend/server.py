@@ -83,7 +83,7 @@ class UserCreate(BaseModel):
         return v
     
     @validator('role')
-    def validate_role(cls, v, values):
+    def validate_role(cls, v, values, **kwargs):
         if v == 'administrateur':
             # Seul un code admin spécial permet de créer un administrateur
             code_admin = values.get('code_admin')
