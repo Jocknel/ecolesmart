@@ -2112,6 +2112,210 @@ const BulletinsComponent = ({ user }) => {
   );
 };
 
+// Composant Calendrier Académique
+const CalendrierComponent = ({ user }) => {
+  const [evenements, setEvenements] = useState([]);
+  const [trimestres, setTrimestres] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMois, setSelectedMois] = useState(new Date().getMonth() + 1);
+  const [selectedAnnee, setSelectedAnnee] = useState(new Date().getFullYear());
+  
+  const mois = [
+    { value: 1, label: 'Janvier' }, { value: 2, label: 'Février' }, { value: 3, label: 'Mars' },
+    { value: 4, label: 'Avril' }, { value: 5, label: 'Mai' }, { value: 6, label: 'Juin' },
+    { value: 7, label: 'Juillet' }, { value: 8, label: 'Août' }, { value: 9, label: 'Septembre' },
+    { value: 10, label: 'Octobre' }, { value: 11, label: 'Novembre' }, { value: 12, label: 'Décembre' }
+  ];
+
+  useEffect(() => {
+    fetchEvenements();
+    fetchTrimestres();
+  }, [selectedMois, selectedAnnee]);
+
+  const fetchEvenements = async () => {
+    try {
+      const response = await axios.get(`/calendrier/evenements?mois=${selectedMois}&annee=${selectedAnnee}`);
+      setEvenements(response.data.evenements);
+    } catch (error) {
+      console.error('Erreur chargement événements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTrimestres = async () => {
+    try {
+      const response = await axios.get('/calendrier/trimestres');
+      setTrimestres(response.data.trimestres);
+    } catch (error) {
+      console.error('Erreur chargement trimestres:', error);
+    }
+  };
+
+  const getTypeColor = (type) => {
+    const colors = {
+      'cours': 'bg-blue-100 text-blue-800',
+      'examen': 'bg-red-100 text-red-800',
+      'vacances': 'bg-green-100 text-green-800',
+      'reunion': 'bg-purple-100 text-purple-800',
+      'activite': 'bg-orange-100 text-orange-800',
+      'autre': 'bg-gray-100 text-gray-800'
+    };
+    return colors[type] || colors.autre;
+  };
+
+  const getCurrentTrimestre = () => {
+    const today = new Date();
+    const currentDateStr = today.toISOString().split('T')[0];
+    
+    return trimestres.find(t => 
+      currentDateStr >= t.debut && currentDateStr <= t.fin
+    );
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Chargement du calendrier...</div>;
+  }
+
+  return (
+    <div className="space-y-6" data-testid="calendrier-section">
+      <div>
+        <h2 className="text-3xl font-bold text-gray-900">Calendrier Académique</h2>
+        <p className="text-gray-600 mt-2">Planning des cours, examens et activités scolaires</p>
+      </div>
+
+      {/* Navigation mois/année */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-4">
+            <div className="space-y-2">
+              <Label>Mois</Label>
+              <Select value={selectedMois.toString()} onValueChange={(value) => setSelectedMois(parseInt(value))}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {mois.map(m => (
+                    <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Année</Label>
+              <Select value={selectedAnnee.toString()} onValueChange={(value) => setSelectedAnnee(parseInt(value))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Informations sur les trimestres */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {trimestres.map((trimestre, index) => {
+          const isCurrent = getCurrentTrimestre()?.code === trimestre.code;
+          return (
+            <Card key={index} className={isCurrent ? 'border-blue-500 bg-blue-50' : ''}>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <h3 className="font-bold text-lg">{trimestre.nom}</h3>
+                    {isCurrent && <Badge className="ml-2 bg-blue-600">Actuel</Badge>}
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Début:</strong> {new Date(trimestre.debut).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Fin:</strong> {new Date(trimestre.fin).toLocaleDateString('fr-FR')}</p>
+                    <p><strong>Vacances:</strong> {trimestre.vacances}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Liste des événements */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Événements - {mois.find(m => m.value === selectedMois)?.label} {selectedAnnee}
+            ({evenements.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {evenements.length > 0 ? (
+            <div className="space-y-3">
+              {evenements.map((evenement) => (
+                <div key={evenement._id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-medium text-lg">{evenement.titre}</h4>
+                        <Badge className={getTypeColor(evenement.type_evenement)}>
+                          {evenement.type_evenement.charAt(0).toUpperCase() + evenement.type_evenement.slice(1)}
+                        </Badge>
+                        {evenement.classe && (
+                          <Badge variant="outline">{evenement.classe}</Badge>
+                        )}
+                      </div>
+                      
+                      {evenement.description && (
+                        <p className="text-gray-600 mb-2">{evenement.description}</p>
+                      )}
+                      
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span>
+                          📅 {new Date(evenement.date_debut).toLocaleDateString('fr-FR')}
+                          {evenement.date_fin && evenement.date_fin !== evenement.date_debut && (
+                            <span> → {new Date(evenement.date_fin).toLocaleDateString('fr-FR')}</span>
+                          )}
+                        </span>
+                        {evenement.matiere && (
+                          <span>📚 {evenement.matiere}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>Aucun événement prévu pour {mois.find(m => m.value === selectedMois)?.label} {selectedAnnee}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Note d'information */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">Système de gestion du calendrier</p>
+              <p>
+                Les administrateurs et enseignants peuvent créer des événements dans le calendrier académique. 
+                Les emplois du temps détaillés par classe seront bientôt disponibles.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Composant Administration (réservé aux administrateurs)
 const AdministrationComponent = ({ user }) => {
   const [codeGenere, setCodeGenere] = useState(null);
