@@ -1687,6 +1687,7 @@ const App = () => {
           {activeTab === 'factures' && <FacturesComponent user={user} />}
           {activeTab === 'paiements' && <PaiementsComponent user={user} />}
           {activeTab === 'presences' && <PresencesComponent user={user} />}
+          {activeTab === 'admin' && user.role === 'administrateur' && <AdministrationComponent user={user} />}
         </main>
       </div>
       
