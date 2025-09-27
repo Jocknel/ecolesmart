@@ -124,7 +124,7 @@ class PaiementCreate(BaseModel):
     @validator('numero_payeur')
     def validate_payer_phone(cls, v):
         clean_phone = re.sub(r"[\s\-\.]", "", v)
-        if not re.match(r"^(\+224|224)?[6-7][0-9]{7}$", clean_phone):
+        if not re.match(r"^(\+224|224)?[6-7][0-9]{8}$", clean_phone):
             raise ValueError('Numéro de téléphone guinéen invalide')
         return v
 
