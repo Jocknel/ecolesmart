@@ -1959,6 +1959,312 @@ async def get_mes_devoirs(current_user: dict = Depends(get_current_user)):
     response = await list_devoirs(eleve_id=current_user["_id"], current_user=current_user)
     return response
 
+# Routes de système de communication
+@api_router.post("/messages")
+async def envoyer_message(message_data: MessageCreate, current_user: dict = Depends(get_current_user)):
+    """Envoyer un message interne"""
+    
+    # Vérifier que le destinataire existe
+    destinataire = await db.users.find_one({"_id": message_data.destinataire_id})
+    if not destinataire:
+        raise HTTPException(status_code=404, detail="Destinataire introuvable")
+    
+    message_doc = {
+        "_id": str(uuid.uuid4()),
+        "expediteur_id": current_user["_id"],
+        "destinataire_id": message_data.destinataire_id,
+        "sujet": message_data.sujet,
+        "contenu": message_data.contenu,
+        "type_message": message_data.type_message,
+        "priorite": message_data.priorite,
+        "classe_destinataire": message_data.classe_destinataire,
+        "matiere_concernee": message_data.matiere_concernee,
+        "lu": False,
+        "archive": False,
+        "date_envoi": datetime.now(timezone.utc),
+        "date_lecture": None,
+        "date_creation": datetime.now(timezone.utc)
+    }
+    
+    await db.messages.insert_one(message_doc)
+    
+    # Créer une notification automatique
+    notification_data = NotificationCreate(
+        destinataire_id=message_data.destinataire_id,
+        titre=f"Nouveau message de {current_user['nom']} {current_user['prenoms']}",
+        message=f"Sujet: {message_data.sujet}",
+        type_notification="info",
+        canaux=["app", "email"],
+        lien_action=f"/messages/{message_doc['_id']}"
+    )
+    
+    await creer_notification(notification_data, current_user)
+    
+    return {"message": "Message envoyé avec succès", "message_id": message_doc["_id"]}
+
+@api_router.get("/messages")
+async def lister_messages(
+    type_boite: str = Query("recus", pattern="^(recus|envoyes|archives)$"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user)
+):
+    """Lister les messages de l'utilisateur"""
+    
+    filter_query = {}
+    
+    if type_boite == "recus":
+        filter_query["destinataire_id"] = current_user["_id"]
+        filter_query["archive"] = False
+    elif type_boite == "envoyes":
+        filter_query["expediteur_id"] = current_user["_id"]
+        filter_query["archive"] = False
+    elif type_boite == "archives":
+        filter_query["$or"] = [
+            {"destinataire_id": current_user["_id"], "archive": True},
+            {"expediteur_id": current_user["_id"], "archive": True}
+        ]
+    
+    # Comptage total
+    total = await db.messages.count_documents(filter_query)
+    
+    # Pagination
+    skip = (page - 1) * limit
+    
+    # Pipeline pour inclure les infos expéditeur/destinataire
+    pipeline = [
+        {"$match": filter_query},
+        {"$lookup": {
+            "from": "users",
+            "localField": "expediteur_id",
+            "foreignField": "_id",
+            "as": "expediteur"
+        }},
+        {"$lookup": {
+            "from": "users",
+            "localField": "destinataire_id",
+            "foreignField": "_id",
+            "as": "destinataire"
+        }},
+        {"$unwind": {"path": "$expediteur", "preserveNullAndEmptyArrays": True}},
+        {"$unwind": {"path": "$destinataire", "preserveNullAndEmptyArrays": True}},
+        {"$sort": {"date_envoi": -1}},
+        {"$skip": skip},
+        {"$limit": limit}
+    ]
+    
+    cursor = db.messages.aggregate(pipeline)
+    messages = await cursor.to_list(length=None)
+    
+    # Nettoyage des données sensibles
+    for message in messages:
+        message['_id'] = str(message['_id'])
+        if 'expediteur' in message and message['expediteur']:
+            message['expediteur']['_id'] = str(message['expediteur']['_id'])
+            message['expediteur'].pop('mot_de_passe', None)
+        if 'destinataire' in message and message['destinataire']:
+            message['destinataire']['_id'] = str(message['destinataire']['_id'])
+            message['destinataire'].pop('mot_de_passe', None)
+    
+    return {
+        "messages": messages,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+        "non_lus": await db.messages.count_documents({
+            "destinataire_id": current_user["_id"],
+            "lu": False,
+            "archive": False
+        })
+    }
+
+@api_router.get("/messages/{message_id}")
+async def consulter_message(message_id: str, current_user: dict = Depends(get_current_user)):
+    """Consulter un message et le marquer comme lu"""
+    
+    # Pipeline pour récupérer le message avec les infos des utilisateurs
+    pipeline = [
+        {"$match": {"_id": message_id}},
+        {"$lookup": {
+            "from": "users",
+            "localField": "expediteur_id",
+            "foreignField": "_id",
+            "as": "expediteur"
+        }},
+        {"$lookup": {
+            "from": "users",
+            "localField": "destinataire_id",
+            "foreignField": "_id",
+            "as": "destinataire"
+        }},
+        {"$unwind": {"path": "$expediteur", "preserveNullAndEmptyArrays": True}},
+        {"$unwind": {"path": "$destinataire", "preserveNullAndEmptyArrays": True}}
+    ]
+    
+    cursor = db.messages.aggregate(pipeline)
+    messages = await cursor.to_list(length=None)
+    
+    if not messages:
+        raise HTTPException(status_code=404, detail="Message introuvable")
+    
+    message = messages[0]
+    
+    # Vérifier que l'utilisateur a le droit de consulter ce message
+    if message["expediteur_id"] != current_user["_id"] and message["destinataire_id"] != current_user["_id"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # Marquer comme lu si c'est le destinataire
+    if message["destinataire_id"] == current_user["_id"] and not message["lu"]:
+        await db.messages.update_one(
+            {"_id": message_id},
+            {
+                "$set": {
+                    "lu": True,
+                    "date_lecture": datetime.now(timezone.utc)
+                }
+            }
+        )
+        message["lu"] = True
+    
+    # Nettoyage
+    message['_id'] = str(message['_id'])
+    if message['expediteur']:
+        message['expediteur']['_id'] = str(message['expediteur']['_id'])
+        message['expediteur'].pop('mot_de_passe', None)
+    if message['destinataire']:
+        message['destinataire']['_id'] = str(message['destinataire']['_id'])
+        message['destinataire'].pop('mot_de_passe', None)
+    
+    return message
+
+@api_router.post("/messages/{message_id}/repondre")
+async def repondre_message(message_id: str, reponse_data: ReponseMessageCreate, current_user: dict = Depends(get_current_user)):
+    """Répondre à un message"""
+    
+    # Récupérer le message original
+    message_parent = await db.messages.find_one({"_id": message_id})
+    if not message_parent:
+        raise HTTPException(status_code=404, detail="Message introuvable")
+    
+    # Déterminer le destinataire (l'autre personne de la conversation)
+    if message_parent["expediteur_id"] == current_user["_id"]:
+        destinataire_id = message_parent["destinataire_id"]
+    else:
+        destinataire_id = message_parent["expediteur_id"]
+    
+    # Créer la réponse
+    reponse_message = MessageCreate(
+        destinataire_id=destinataire_id,
+        sujet=f"Re: {message_parent['sujet']}",
+        contenu=reponse_data.contenu,
+        type_message=message_parent["type_message"],
+        priorite=message_parent["priorite"]
+    )
+    
+    return await envoyer_message(reponse_message, current_user)
+
+# Routes de gestion des notifications
+async def creer_notification(notification_data: NotificationCreate, current_user: dict = None):
+    """Fonction utilitaire pour créer une notification"""
+    
+    notification_doc = {
+        "_id": str(uuid.uuid4()),
+        "destinataire_id": notification_data.destinataire_id,
+        "titre": notification_data.titre,
+        "message": notification_data.message,
+        "type_notification": notification_data.type_notification,
+        "canaux": notification_data.canaux,
+        "lien_action": notification_data.lien_action,
+        "donnees_contexte": notification_data.donnees_contexte,
+        "lue": False,
+        "traitee": False,
+        "date_creation": datetime.now(timezone.utc),
+        "date_lecture": None
+    }
+    
+    await db.notifications.insert_one(notification_doc)
+    
+    # Simuler l'envoi selon les canaux
+    for canal in notification_data.canaux:
+        if canal == "email":
+            # TODO: Intégrer service email (SendGrid, etc.)
+            logger.info(f"Email envoyé à {notification_data.destinataire_id}: {notification_data.titre}")
+        elif canal == "sms":
+            # TODO: Intégrer service SMS
+            logger.info(f"SMS envoyé à {notification_data.destinataire_id}: {notification_data.titre}")
+        elif canal == "whatsapp":
+            # TODO: Intégrer WhatsApp Business API
+            logger.info(f"WhatsApp envoyé à {notification_data.destinataire_id}: {notification_data.titre}")
+    
+    return notification_doc
+
+@api_router.post("/notifications")
+async def envoyer_notification(notification_data: NotificationCreate, current_user: dict = Depends(get_current_user)):
+    """Envoyer une notification"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    notification = await creer_notification(notification_data, current_user)
+    return {"message": "Notification envoyée avec succès", "notification_id": notification["_id"]}
+
+@api_router.get("/notifications")
+async def lister_notifications(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    non_lues_seulement: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lister les notifications de l'utilisateur"""
+    
+    filter_query = {"destinataire_id": current_user["_id"]}
+    
+    if non_lues_seulement:
+        filter_query["lue"] = False
+    
+    # Comptage total
+    total = await db.notifications.count_documents(filter_query)
+    
+    # Pagination
+    skip = (page - 1) * limit
+    
+    cursor = db.notifications.find(filter_query).sort("date_creation", -1).skip(skip).limit(limit)
+    notifications = await cursor.to_list(length=None)
+    
+    for notif in notifications:
+        notif['_id'] = str(notif['_id'])
+    
+    return {
+        "notifications": notifications,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+        "non_lues": await db.notifications.count_documents({
+            "destinataire_id": current_user["_id"],
+            "lue": False
+        })
+    }
+
+@api_router.put("/notifications/{notification_id}/marquer-lue")
+async def marquer_notification_lue(notification_id: str, current_user: dict = Depends(get_current_user)):
+    """Marquer une notification comme lue"""
+    
+    result = await db.notifications.update_one(
+        {"_id": notification_id, "destinataire_id": current_user["_id"]},
+        {
+            "$set": {
+                "lue": True,
+                "date_lecture": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification introuvable")
+    
+    return {"message": "Notification marquée comme lue"}
+
 @api_router.get("/calendrier/trimestres")
 async def get_trimestres_info(annee_scolaire: str = "2024-2025"):
     """Information sur les trimestres (compatibilité)"""
