@@ -130,18 +130,20 @@ const AuthComponent = ({ onAuthSuccess }) => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmer_mot_de_passe">Confirmer le mot de passe</Label>
-              <Input
-                id="confirmer_mot_de_passe"
-                name="confirmer_mot_de_passe"
-                type="password"
-                value={formData.confirmer_mot_de_passe}
-                onChange={handleInputChange}
-                required
-                data-testid="confirm-password-input"
-              />
-            </div>
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmer_mot_de_passe">Confirmer le mot de passe</Label>
+                <Input
+                  id="confirmer_mot_de_passe"
+                  name="confirmer_mot_de_passe"
+                  type="password"
+                  value={formData.confirmer_mot_de_passe}
+                  onChange={handleInputChange}
+                  required
+                  data-testid="confirm-password-input"
+                />
+              </div>
+            )}
 
             {!isLogin && (
               <>
