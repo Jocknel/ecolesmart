@@ -110,6 +110,9 @@ class Token(BaseModel):
     token_type: str
     user: dict
 
+class GoogleSessionRequest(BaseModel):
+    session_id: str
+
 class EleveCreate(BaseModel):
     nom: str = Field(min_length=2, max_length=100)
     prenoms: str = Field(min_length=2, max_length=200)
