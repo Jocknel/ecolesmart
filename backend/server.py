@@ -286,6 +286,28 @@ class NotationRenduCreate(BaseModel):
         # La validation de la note maximale sera faite côté serveur avec les infos du devoir
         return v
 
+class MessageCreate(BaseModel):
+    destinataire_id: str
+    sujet: str = Field(min_length=3, max_length=200)
+    contenu: str = Field(min_length=1, max_length=5000)
+    type_message: str = Field(default="prive", pattern="^(prive|groupe|annonce)$")
+    priorite: str = Field(default="normale", pattern="^(basse|normale|haute|urgente)$")
+    classe_destinataire: Optional[str] = None  # Pour messages de groupe par classe
+    matiere_concernee: Optional[str] = None
+
+class NotificationCreate(BaseModel):
+    destinataire_id: str
+    titre: str = Field(min_length=3, max_length=100)
+    message: str = Field(min_length=1, max_length=500)
+    type_notification: str = Field(pattern="^(info|alerte|rappel|urgence)$")
+    canaux: List[str] = Field(default=["app"])  # app, email, sms, whatsapp
+    lien_action: Optional[str] = None  # URL pour action rapide
+    donnees_contexte: Optional[dict] = None  # Données JSON additionnelles
+
+class ReponseMessageCreate(BaseModel):
+    message_parent_id: str
+    contenu: str = Field(min_length=1, max_length=5000)
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
