@@ -2366,6 +2366,8 @@ const App = () => {
         <main className="p-8">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'eleves' && <ElevesComponent user={user} />}
+          {activeTab === 'notes' && <NotesComponent user={user} />}
+          {activeTab === 'bulletins' && <BulletinsComponent user={user} />}
           {activeTab === 'factures' && <FacturesComponent user={user} />}
           {activeTab === 'paiements' && <PaiementsComponent user={user} />}
           {activeTab === 'presences' && <PresencesComponent user={user} />}
