@@ -1443,7 +1443,7 @@ const NotesComponent = ({ user }) => {
   const [showCreateNote, setShowCreateNote] = useState(false);
   const [showCreateMatiere, setShowCreateMatiere] = useState(false);
   const [selectedEleve, setSelectedEleve] = useState('');
-  const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('');
   
   const [noteFormData, setNoteFormData] = useState({
     eleve_id: '',
@@ -1909,7 +1909,7 @@ const NotesComponent = ({ user }) => {
 const BulletinsComponent = ({ user }) => {
   const [eleves, setEleves] = useState([]);
   const [selectedEleve, setSelectedEleve] = useState('');
-  const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('');
   const [bulletinData, setBulletinData] = useState(null);
   const [loading, setLoading] = useState(false);
 
