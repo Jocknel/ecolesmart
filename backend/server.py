@@ -243,6 +243,15 @@ async def register_user(user_data: UserCreate):
             detail="Un utilisateur avec cet email existe déjà"
         )
     
+    # Vérifier s'il y a déjà des administrateurs dans le système
+    admin_count = await db.users.count_documents({"role": "administrateur"})
+    
+    # Si c'est le premier utilisateur et qu'il demande le rôle admin, l'autoriser automatiquement
+    if admin_count == 0 and user_data.role == "administrateur":
+        logger.info(f"Premier administrateur créé automatiquement: {user_data.email}")
+        # Pas besoin de code pour le premier admin
+        user_data.code_admin = "PREMIER_ADMIN_2024"
+    
     # Création de l'utilisateur
     hashed_password = get_password_hash(user_data.mot_de_passe)
     user_doc = {
