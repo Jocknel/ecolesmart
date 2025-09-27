@@ -166,11 +166,11 @@ class PresenceCreate(BaseModel):
 class NoteCreate(BaseModel):
     eleve_id: str
     matiere: str
-    type_evaluation: str = Field(regex="^(devoir|composition|controle|examen|oral)$")
+    type_evaluation: str = Field(pattern="^(devoir|composition|controle|examen|oral)$")
     note: float = Field(ge=0, le=20)  # Notes sur 20
     coefficient: float = Field(default=1.0, ge=0.5, le=5.0)
     date_evaluation: date
-    trimestre: str = Field(regex="^(T1|T2|T3)$")
+    trimestre: str = Field(pattern="^(T1|T2|T3)$")
     annee_scolaire: str = Field(default="2024-2025")
     commentaire: Optional[str] = None
 
