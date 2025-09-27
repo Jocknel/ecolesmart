@@ -234,6 +234,58 @@ class CreneauHoraireCreate(BaseModel):
     type_creneau: str = Field(default="cours", pattern="^(cours|pause|recreation)$")
     ordre: int = Field(ge=1, le=20)  # Position dans la journée
 
+class RessourceCreate(BaseModel):
+    titre: str = Field(min_length=3, max_length=200)
+    description: Optional[str] = None
+    type_ressource: str = Field(pattern="^(lecon|exercice|support|video|document)$")
+    matiere: str
+    classe: str
+    fichier_url: Optional[str] = None  # URL du fichier uploadé
+    fichier_nom: Optional[str] = None  # Nom original du fichier
+    fichier_type: Optional[str] = None  # Type MIME
+    taille_fichier: Optional[int] = None  # Taille en bytes
+    visible_eleves: bool = Field(default=True)
+    date_publication: Optional[date] = Field(default_factory=date.today)
+
+class DevoirCreate(BaseModel):
+    titre: str = Field(min_length=3, max_length=200)
+    description: str = Field(min_length=10)
+    consignes: Optional[str] = None
+    matiere: str
+    classe: str
+    date_assignation: date = Field(default_factory=date.today)
+    date_echeance: date
+    note_sur: float = Field(default=20.0, gt=0, le=100)
+    coefficient: float = Field(default=1.0, ge=0.5, le=5.0)
+    fichier_consigne_url: Optional[str] = None  # Fichier joint avec les consignes
+    fichier_consigne_nom: Optional[str] = None
+    actif: bool = Field(default=True)
+    
+    @validator('date_echeance')
+    def validate_echeance(cls, v, values):
+        if 'date_assignation' in values and v <= values['date_assignation']:
+            raise ValueError('La date d\'échéance doit être après la date d\'assignation')
+        return v
+
+class RenduDevoirCreate(BaseModel):
+    devoir_id: str
+    commentaire_eleve: Optional[str] = None
+    fichier_rendu_url: Optional[str] = None  # Fichier rendu par l'élève
+    fichier_rendu_nom: Optional[str] = None
+    fichier_rendu_type: Optional[str] = None
+    taille_fichier: Optional[int] = None
+
+class NotationRenduCreate(BaseModel):
+    rendu_id: str
+    note: float = Field(ge=0)
+    commentaire_enseignant: Optional[str] = None
+    date_correction: date = Field(default_factory=date.today)
+    
+    @validator('note')
+    def validate_note(cls, v, values):
+        # La validation de la note maximale sera faite côté serveur avec les infos du devoir
+        return v
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
