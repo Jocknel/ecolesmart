@@ -2332,6 +2332,537 @@ const CalendrierComponent = ({ user }) => {
   );
 };
 
+// Composant Emplois du Temps
+const EmploisDuTempsComponent = ({ user }) => {
+  const [emploisDuTemps, setEmploisDuTemps] = useState([]);
+  const [trimestres, setTrimestres] = useState([]);
+  const [creneaux, setCreneaux] = useState([]);
+  const [matieres, setMatieres] = useState([]);
+  const [enseignants, setEnseignants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedClasse, setSelectedClasse] = useState('6ème');
+  const [showCreateCours, setShowCreateCours] = useState(false);
+  const [showCreateTrimestre, setShowCreateTrimestre] = useState(false);
+  
+  const [coursFormData, setCoursFormData] = useState({
+    classe: '6ème',
+    jour_semaine: 1,
+    heure_debut: '08:00',
+    heure_fin: '08:55',
+    matiere: 'none',
+    enseignant_id: 'none',
+    salle: '',
+    type_cours: 'cours',
+    couleur: '#3B82F6'
+  });
+
+  const [trimestreFormData, setTrimestreFormData] = useState({
+    nom: '',
+    code: 'T1',
+    date_debut: '',
+    date_fin: '',
+    date_debut_vacances: '',
+    date_fin_vacances: '',
+    annee_scolaire: '2024-2025'
+  });
+
+  const classes = ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2', '6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Tle'];
+  const joursSemaine = [
+    { id: 1, nom: 'Lundi' },
+    { id: 2, nom: 'Mardi' },
+    { id: 3, nom: 'Mercredi' },
+    { id: 4, nom: 'Jeudi' },
+    { id: 5, nom: 'Vendredi' },
+    { id: 6, nom: 'Samedi' },
+    { id: 7, nom: 'Dimanche' }
+  ];
+
+  const typeCours = ['cours', 'td', 'tp', 'evaluation', 'soutien'];
+
+  useEffect(() => {
+    fetchEmploisDuTemps();
+    fetchTrimestres();
+    fetchCreneaux();
+    fetchMatieres();
+    fetchEnseignants();
+  }, [selectedClasse]);
+
+  const fetchEmploisDuTemps = async () => {
+    try {
+      const response = await axios.get(`/emplois-du-temps?classe=${selectedClasse}`);
+      setEmploisDuTemps(response.data.emploi_du_temps);
+    } catch (error) {
+      console.error('Erreur chargement emplois du temps:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTrimestres = async () => {
+    try {
+      const response = await axios.get('/trimestres');
+      setTrimestres(response.data.trimestres);
+    } catch (error) {
+      console.error('Erreur chargement trimestres:', error);
+    }
+  };
+
+  const fetchCreneaux = async () => {
+    try {
+      const response = await axios.get('/creneaux');
+      setCreneaux(response.data.creneaux);
+    } catch (error) {
+      console.error('Erreur chargement créneaux:', error);
+    }
+  };
+
+  const fetchMatieres = async () => {
+    try {
+      const response = await axios.get('/matieres');
+      setMatieres(response.data.matieres);
+    } catch (error) {
+      console.error('Erreur chargement matières:', error);
+    }
+  };
+
+  const fetchEnseignants = async () => {
+    try {
+      // Récupérer les utilisateurs avec le rôle enseignant
+      const response = await axios.get('/eleves'); // On utilisera cette route temporairement
+      // TODO: Créer une route spécifique pour les enseignants
+      setEnseignants([]); // Pour l'instant
+    } catch (error) {
+      console.error('Erreur chargement enseignants:', error);
+    }
+  };
+
+  const handleCreateCours = async (e) => {
+    e.preventDefault();
+    
+    if (coursFormData.matiere === 'none') {
+      toast.error('Veuillez sélectionner une matière');
+      return;
+    }
+
+    try {
+      await axios.post('/emplois-du-temps', {
+        ...coursFormData,
+        jour_semaine: parseInt(coursFormData.jour_semaine),
+        enseignant_id: coursFormData.enseignant_id !== 'none' ? coursFormData.enseignant_id : null
+      });
+      toast.success('Cours ajouté à l\'emploi du temps');
+      setShowCreateCours(false);
+      setCoursFormData({
+        classe: selectedClasse,
+        jour_semaine: 1,
+        heure_debut: '08:00',
+        heure_fin: '08:55',
+        matiere: 'none',
+        enseignant_id: 'none',
+        salle: '',
+        type_cours: 'cours',
+        couleur: '#3B82F6'
+      });
+      fetchEmploisDuTemps();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'ajout du cours');
+    }
+  };
+
+  const handleCreateTrimestre = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/trimestres', trimestreFormData);
+      toast.success('Trimestre créé avec succès');
+      setShowCreateTrimestre(false);
+      setTrimestreFormData({
+        nom: '',
+        code: 'T1',
+        date_debut: '',
+        date_fin: '',
+        date_debut_vacances: '',
+        date_fin_vacances: '',
+        annee_scolaire: '2024-2025'
+      });
+      fetchTrimestres();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la création du trimestre');
+    }
+  };
+
+  const supprimerCours = async (coursId) => {
+    try {
+      await axios.delete(`/emplois-du-temps/${coursId}`);
+      toast.success('Cours supprimé');
+      fetchEmploisDuTemps();
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // Organiser l'emploi du temps en grille
+  const organiserEmploiDuTemps = () => {
+    const grille = {};
+    
+    // Initialiser la grille
+    joursSemaine.slice(0, 6).forEach(jour => { // Lundi à Samedi
+      grille[jour.id] = {};
+    });
+    
+    // Placer les cours dans la grille
+    emploisDuTemps.forEach(cours => {
+      const cle = `${cours.heure_debut}-${cours.heure_fin}`;
+      if (grille[cours.jour_semaine]) {
+        grille[cours.jour_semaine][cle] = cours;
+      }
+    });
+    
+    return grille;
+  };
+
+  const getCreneauxUniques = () => {
+    const creneauxSet = new Set();
+    emploisDuTemps.forEach(cours => {
+      creneauxSet.add(`${cours.heure_debut}-${cours.heure_fin}`);
+    });
+    return Array.from(creneauxSet).sort();
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Chargement des emplois du temps...</div>;
+  }
+
+  const grilleEmploi = organiserEmploiDuTemps();
+  const creneauxUniques = getCreneauxUniques();
+
+  return (
+    <div className="space-y-6" data-testid="emplois-du-temps-section">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Emplois du Temps</h2>
+          <p className="text-gray-600 mt-2">Gestion des plannings de cours par classe</p>
+        </div>
+        
+        <div className="flex space-x-2">
+          {(user.role === 'administrateur') && (
+            <Dialog open={showCreateTrimestre} onOpenChange={setShowCreateTrimestre}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="create-trimestre-btn">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouveau Trimestre
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Créer un nouveau trimestre</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateTrimestre} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nom">Nom du trimestre</Label>
+                    <Input
+                      id="nom"
+                      value={trimestreFormData.nom}
+                      onChange={(e) => setTrimestreFormData({...trimestreFormData, nom: e.target.value})}
+                      placeholder="Trimestre 1"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Code</Label>
+                    <Select value={trimestreFormData.code} onValueChange={(value) => setTrimestreFormData({...trimestreFormData, code: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="T1">T1</SelectItem>
+                        <SelectItem value="T2">T2</SelectItem>
+                        <SelectItem value="T3">T3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="date_debut">Date de début</Label>
+                      <Input
+                        id="date_debut"
+                        type="date"
+                        value={trimestreFormData.date_debut}
+                        onChange={(e) => setTrimestreFormData({...trimestreFormData, date_debut: e.target.value})}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="date_fin">Date de fin</Label>
+                      <Input
+                        id="date_fin"
+                        type="date"
+                        value={trimestreFormData.date_fin}
+                        onChange={(e) => setTrimestreFormData({...trimestreFormData, date_fin: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setShowCreateTrimestre(false)}>
+                      Annuler
+                    </Button>
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                      Créer
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {(user.role === 'administrateur' || user.role === 'enseignant') && (
+            <Dialog open={showCreateCours} onOpenChange={setShowCreateCours}>
+              <DialogTrigger asChild>
+                <Button className="bg-green-600 hover:bg-green-700" data-testid="add-course-btn">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter Cours
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Ajouter un cours à l'emploi du temps</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateCours} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Classe</Label>
+                      <Select value={coursFormData.classe} onValueChange={(value) => setCoursFormData({...coursFormData, classe: value})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {classes.map(classe => (
+                            <SelectItem key={classe} value={classe}>{classe}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Jour</Label>
+                      <Select value={coursFormData.jour_semaine.toString()} onValueChange={(value) => setCoursFormData({...coursFormData, jour_semaine: parseInt(value)})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {joursSemaine.slice(0, 6).map(jour => (
+                            <SelectItem key={jour.id} value={jour.id.toString()}>{jour.nom}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="heure_debut">Heure début</Label>
+                      <Input
+                        id="heure_debut"
+                        type="time"
+                        value={coursFormData.heure_debut}
+                        onChange={(e) => setCoursFormData({...coursFormData, heure_debut: e.target.value})}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="heure_fin">Heure fin</Label>
+                      <Input
+                        id="heure_fin"
+                        type="time"
+                        value={coursFormData.heure_fin}
+                        onChange={(e) => setCoursFormData({...coursFormData, heure_fin: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Matière</Label>
+                    <Select value={coursFormData.matiere} onValueChange={(value) => setCoursFormData({...coursFormData, matiere: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une matière" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sélectionner une matière</SelectItem>
+                        {matieres.map(matiere => (
+                          <SelectItem key={matiere._id} value={matiere.nom}>
+                            {matiere.nom}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="salle">Salle (optionnel)</Label>
+                      <Input
+                        id="salle"
+                        value={coursFormData.salle}
+                        onChange={(e) => setCoursFormData({...coursFormData, salle: e.target.value})}
+                        placeholder="Salle A1"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Type</Label>
+                      <Select value={coursFormData.type_cours} onValueChange={(value) => setCoursFormData({...coursFormData, type_cours: value})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {typeCours.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type.charAt(0).toUpperCase() + type.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setShowCreateCours(false)}>
+                      Annuler
+                    </Button>
+                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                      Ajouter
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </div>
+
+      {/* Sélecteur de classe */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-4">
+            <Label className="font-medium">Classe :</Label>
+            <Select value={selectedClasse} onValueChange={setSelectedClasse}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map(classe => (
+                  <SelectItem key={classe} value={classe}>{classe}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grille emploi du temps */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Emploi du temps - {selectedClasse}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {creneauxUniques.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 p-3 text-left font-medium">Horaires</th>
+                    {joursSemaine.slice(0, 6).map(jour => (
+                      <th key={jour.id} className="border border-gray-300 p-3 text-center font-medium">
+                        {jour.nom}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {creneauxUniques.map((creneau, index) => (
+                    <tr key={index}>
+                      <td className="border border-gray-300 p-3 bg-gray-50 font-medium text-sm">
+                        {creneau.replace('-', ' - ')}
+                      </td>
+                      {joursSemaine.slice(0, 6).map(jour => {
+                        const cours = grilleEmploi[jour.id]?.[creneau];
+                        return (
+                          <td key={jour.id} className="border border-gray-300 p-1 h-20 relative">
+                            {cours ? (
+                              <div 
+                                className="h-full p-2 rounded text-white text-xs relative group cursor-pointer"
+                                style={{ backgroundColor: cours.couleur }}
+                              >
+                                <div className="font-medium">{cours.matiere}</div>
+                                {cours.salle && <div className="text-xs opacity-90">{cours.salle}</div>}
+                                {cours.enseignant && (
+                                  <div className="text-xs opacity-80">
+                                    {cours.enseignant.nom}
+                                  </div>
+                                )}
+                                
+                                {(user.role === 'administrateur' || user.role === 'enseignant') && (
+                                  <button
+                                    onClick={() => supprimerCours(cours._id)}
+                                    className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="h-full"></div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500 text-lg">Aucun cours planifié pour {selectedClasse}</p>
+              <p className="text-gray-400 text-sm mt-2">Commencez par ajouter des cours à l'emploi du temps</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Liste des trimestres */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {trimestres.map((trimestre, index) => (
+          <Card key={index}>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <h3 className="font-bold text-lg mb-2">{trimestre.nom}</h3>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p><strong>Du:</strong> {new Date(trimestre.date_debut).toLocaleDateString('fr-FR')}</p>
+                  <p><strong>Au:</strong> {new Date(trimestre.date_fin).toLocaleDateString('fr-FR')}</p>
+                  {trimestre.date_debut_vacances && (
+                    <p><strong>Vacances:</strong> {new Date(trimestre.date_debut_vacances).toLocaleDateString('fr-FR')} - {new Date(trimestre.date_fin_vacances).toLocaleDateString('fr-FR')}</p>
+                  )}
+                </div>
+                <Badge variant={trimestre.actif ? "default" : "secondary"} className="mt-2">
+                  {trimestre.actif ? 'Actif' : 'Inactif'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Composant Administration (réservé aux administrateurs)
 const AdministrationComponent = ({ user }) => {
   const [codeGenere, setCodeGenere] = useState(null);
