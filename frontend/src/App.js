@@ -1996,6 +1996,7 @@ const BulletinsComponent = ({ user }) => {
                   <SelectValue placeholder="Sélectionner un élève" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Sélectionner un élève</SelectItem>
                   {eleves.map(eleve => (
                     <SelectItem key={eleve._id} value={eleve._id}>
                       {eleve.nom} {eleve.prenoms} - {eleve.classe}
