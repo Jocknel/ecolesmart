@@ -1663,6 +1663,7 @@ const NotesComponent = ({ user }) => {
                           <SelectValue placeholder="Sélectionner une matière" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="none">Sélectionner une matière</SelectItem>
                           {matieres.map(matiere => (
                             <SelectItem key={matiere._id} value={matiere.nom}>
                               {matiere.nom} ({matiere.code})
