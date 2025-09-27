@@ -1510,6 +1510,18 @@ const NotesComponent = ({ user }) => {
 
   const handleCreateNote = async (e) => {
     e.preventDefault();
+    
+    // Validation côté client
+    if (noteFormData.eleve_id === 'none') {
+      toast.error('Veuillez sélectionner un élève');
+      return;
+    }
+    
+    if (noteFormData.matiere === 'none') {
+      toast.error('Veuillez sélectionner une matière');
+      return;
+    }
+
     try {
       await axios.post('/notes', {
         ...noteFormData,
@@ -1519,8 +1531,8 @@ const NotesComponent = ({ user }) => {
       toast.success('Note enregistrée avec succès');
       setShowCreateNote(false);
       setNoteFormData({
-        eleve_id: '',
-        matiere: '',
+        eleve_id: 'none',
+        matiere: 'none',
         type_evaluation: 'devoir',
         note: '',
         coefficient: '1.0',
