@@ -1443,7 +1443,7 @@ const NotesComponent = ({ user }) => {
   const [showCreateNote, setShowCreateNote] = useState(false);
   const [showCreateMatiere, setShowCreateMatiere] = useState(false);
   const [selectedEleve, setSelectedEleve] = useState('all');
-  const [selectedTrimestre, setSelectedTrimestre] = useState('all');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('T1');
   
   const [noteFormData, setNoteFormData] = useState({
     eleve_id: '',
