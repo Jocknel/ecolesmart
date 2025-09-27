@@ -2864,6 +2864,742 @@ const EmploisDuTempsComponent = ({ user }) => {
   );
 };
 
+// Composant Devoirs & Ressources
+const DevoirsRessourcesComponent = ({ user }) => {
+  const [activeView, setActiveView] = useState('ressources');
+  const [ressources, setRessources] = useState([]);
+  const [devoirs, setDevoirs] = useState([]);
+  const [matieres, setMatieres] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateRessource, setShowCreateRessource] = useState(false);
+  const [showCreateDevoir, setShowCreateDevoir] = useState(false);
+  const [showRendreDevoir, setShowRendreDevoir] = useState(false);
+  const [selectedDevoir, setSelectedDevoir] = useState(null);
+  
+  const [ressourceFormData, setRessourceFormData] = useState({
+    titre: '',
+    description: '',
+    type_ressource: 'lecon',
+    matiere: 'none',
+    classe: '6ème',
+    fichier_url: null,
+    fichier_nom: '',
+    visible_eleves: true
+  });
+
+  const [devoirFormData, setDevoirFormData] = useState({
+    titre: '',
+    description: '',
+    consignes: '',
+    matiere: 'none',
+    classe: '6ème',
+    date_echeance: '',
+    note_sur: 20,
+    coefficient: 1.0,
+    fichier_consigne_url: null
+  });
+
+  const [renduFormData, setRenduFormData] = useState({
+    commentaire_eleve: '',
+    fichier_rendu_url: null,
+    fichier_rendu_nom: ''
+  });
+
+  const classes = ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2', '6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Tle'];
+  const typesRessource = ['lecon', 'exercice', 'support', 'video', 'document'];
+
+  useEffect(() => {
+    fetchRessources();
+    fetchDevoirs();
+    fetchMatieres();
+  }, [activeView]);
+
+  const fetchRessources = async () => {
+    try {
+      const response = await axios.get('/ressources');
+      setRessources(response.data.ressources);
+    } catch (error) {
+      console.error('Erreur chargement ressources:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDevoirs = async () => {
+    try {
+      let endpoint = '/devoirs';
+      if (user.role === 'eleve') {
+        endpoint = '/mes-devoirs';
+      }
+      const response = await axios.get(endpoint);
+      setDevoirs(response.data.devoirs);
+    } catch (error) {
+      console.error('Erreur chargement devoirs:', error);
+    }
+  };
+
+  const fetchMatieres = async () => {
+    try {
+      const response = await axios.get('/matieres');
+      setMatieres(response.data.matieres);
+    } catch (error) {
+      console.error('Erreur chargement matières:', error);
+    }
+  };
+
+  const handleCreateRessource = async (e) => {
+    e.preventDefault();
+    
+    if (ressourceFormData.matiere === 'none') {
+      toast.error('Veuillez sélectionner une matière');
+      return;
+    }
+
+    try {
+      // Simulation d'upload de fichier
+      const ressourceData = {
+        ...ressourceFormData,
+        fichier_url: ressourceFormData.fichier_url ? 'https://example.com/files/ressource.pdf' : null,
+        fichier_nom: ressourceFormData.fichier_nom || null,
+        fichier_type: 'application/pdf',
+        taille_fichier: 1024000
+      };
+
+      await axios.post('/ressources', ressourceData);
+      toast.success('Ressource créée avec succès');
+      setShowCreateRessource(false);
+      setRessourceFormData({
+        titre: '',
+        description: '',
+        type_ressource: 'lecon',
+        matiere: 'none',
+        classe: '6ème',
+        fichier_url: null,
+        fichier_nom: '',
+        visible_eleves: true
+      });
+      fetchRessources();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la création');
+    }
+  };
+
+  const handleCreateDevoir = async (e) => {
+    e.preventDefault();
+    
+    if (devoirFormData.matiere === 'none') {
+      toast.error('Veuillez sélectionner une matière');
+      return;
+    }
+
+    try {
+      const devoirData = {
+        ...devoirFormData,
+        note_sur: parseFloat(devoirFormData.note_sur),
+        coefficient: parseFloat(devoirFormData.coefficient),
+        fichier_consigne_url: devoirFormData.fichier_consigne_url ? 'https://example.com/files/consigne.pdf' : null
+      };
+
+      await axios.post('/devoirs', devoirData);
+      toast.success('Devoir créé avec succès');
+      setShowCreateDevoir(false);
+      setDevoirFormData({
+        titre: '',
+        description: '',
+        consignes: '',
+        matiere: 'none',
+        classe: '6ème',
+        date_echeance: '',
+        note_sur: 20,
+        coefficient: 1.0,
+        fichier_consigne_url: null
+      });
+      fetchDevoirs();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la création');
+    }
+  };
+
+  const handleRendreDevoir = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedDevoir) return;
+
+    try {
+      const renduData = {
+        devoir_id: selectedDevoir._id,
+        ...renduFormData,
+        fichier_rendu_url: renduFormData.fichier_rendu_url ? 'https://example.com/files/rendu.pdf' : null,
+        fichier_rendu_type: 'application/pdf',
+        taille_fichier: 512000
+      };
+
+      await axios.post(`/devoirs/${selectedDevoir._id}/rendre`, renduData);
+      toast.success('Devoir rendu avec succès');
+      setShowRendreDevoir(false);
+      setSelectedDevoir(null);
+      setRenduFormData({
+        commentaire_eleve: '',
+        fichier_rendu_url: null,
+        fichier_rendu_nom: ''
+      });
+      fetchDevoirs();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors du rendu');
+    }
+  };
+
+  const getTypeRessourceBadge = (type) => {
+    const styles = {
+      'lecon': 'bg-blue-100 text-blue-800',
+      'exercice': 'bg-green-100 text-green-800',
+      'support': 'bg-purple-100 text-purple-800',
+      'video': 'bg-red-100 text-red-800',
+      'document': 'bg-gray-100 text-gray-800'
+    };
+    
+    const labels = {
+      'lecon': 'Leçon',
+      'exercice': 'Exercice', 
+      'support': 'Support',
+      'video': 'Vidéo',
+      'document': 'Document'
+    };
+
+    return (
+      <Badge className={styles[type] || styles.document}>
+        {labels[type] || type}
+      </Badge>
+    );
+  };
+
+  const getStatutDevoir = (devoir) => {
+    const aujourd = new Date();
+    const echeance = new Date(devoir.date_echeance);
+    
+    if (user.role === 'eleve' && devoir.mon_rendu && devoir.mon_rendu.length > 0) {
+      const rendu = devoir.mon_rendu[0];
+      if (rendu.note !== null) {
+        return <Badge className="bg-green-100 text-green-800">Noté ({rendu.note}/{devoir.note_sur})</Badge>;
+      } else {
+        return <Badge className="bg-blue-100 text-blue-800">Rendu</Badge>;
+      }
+    } else if (user.role === 'eleve') {
+      if (aujourd > echeance) {
+        return <Badge className="bg-red-100 text-red-800">Échéance dépassée</Badge>;
+      } else {
+        return <Badge className="bg-orange-100 text-orange-800">À rendre</Badge>;
+      }
+    }
+    
+    return <Badge className="bg-blue-100 text-blue-800">Assigné</Badge>;
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Chargement...</div>;
+  }
+
+  return (
+    <div className="space-y-6" data-testid="devoirs-ressources-section">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Devoirs & Ressources</h2>
+          <p className="text-gray-600 mt-2">Gestion des ressources pédagogiques et des devoirs</p>
+        </div>
+        
+        <div className="flex space-x-2">
+          {(user.role === 'administrateur' || user.role === 'enseignant') && (
+            <>
+              <Dialog open={showCreateRessource} onOpenChange={setShowCreateRessource}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="create-resource-btn">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouvelle Ressource
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Publier une ressource</DialogTitle>
+                    <DialogDescription>Leçon, exercice, support de cours</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateRessource} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="titre">Titre</Label>
+                      <Input
+                        id="titre"
+                        value={ressourceFormData.titre}
+                        onChange={(e) => setRessourceFormData({...ressourceFormData, titre: e.target.value})}
+                        placeholder="Titre de la ressource"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Input
+                        id="description"
+                        value={ressourceFormData.description}
+                        onChange={(e) => setRessourceFormData({...ressourceFormData, description: e.target.value})}
+                        placeholder="Description de la ressource"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Type</Label>
+                        <Select value={ressourceFormData.type_ressource} onValueChange={(value) => setRessourceFormData({...ressourceFormData, type_ressource: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {typesRessource.map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Classe</Label>
+                        <Select value={ressourceFormData.classe} onValueChange={(value) => setRessourceFormData({...ressourceFormData, classe: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {classes.map(classe => (
+                              <SelectItem key={classe} value={classe}>{classe}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Matière</Label>
+                      <Select value={ressourceFormData.matiere} onValueChange={(value) => setRessourceFormData({...ressourceFormData, matiere: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une matière" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sélectionner une matière</SelectItem>
+                          {matieres.map(matiere => (
+                            <SelectItem key={matiere._id} value={matiere.nom}>
+                              {matiere.nom}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="fichier">Fichier (optionnel)</Label>
+                      <Input
+                        id="fichier"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setRessourceFormData({
+                              ...ressourceFormData,
+                              fichier_url: 'temp_url',
+                              fichier_nom: file.name
+                            });
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-gray-500">PDF, Word, Images, Vidéos (max 50MB)</p>
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setShowCreateRessource(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                        Publier
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showCreateDevoir} onOpenChange={setShowCreateDevoir}>
+                <DialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700" data-testid="create-homework-btn">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouveau Devoir
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Créer un devoir</DialogTitle>
+                    <DialogDescription>Assigner un devoir aux élèves</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateDevoir} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="titre_devoir">Titre du devoir</Label>
+                      <Input
+                        id="titre_devoir"
+                        value={devoirFormData.titre}
+                        onChange={(e) => setDevoirFormData({...devoirFormData, titre: e.target.value})}
+                        placeholder="Titre du devoir"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description_devoir">Description</Label>
+                      <textarea
+                        id="description_devoir"
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        rows="3"
+                        value={devoirFormData.description}
+                        onChange={(e) => setDevoirFormData({...devoirFormData, description: e.target.value})}
+                        placeholder="Description détaillée du devoir"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="consignes">Consignes</Label>
+                      <textarea
+                        id="consignes"
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        rows="2"
+                        value={devoirFormData.consignes}
+                        onChange={(e) => setDevoirFormData({...devoirFormData, consignes: e.target.value})}
+                        placeholder="Instructions spécifiques pour les élèves"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Matière</Label>
+                        <Select value={devoirFormData.matiere} onValueChange={(value) => setDevoirFormData({...devoirFormData, matiere: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sélectionner une matière</SelectItem>
+                            {matieres.map(matiere => (
+                              <SelectItem key={matiere._id} value={matiere.nom}>
+                                {matiere.nom}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Classe</Label>
+                        <Select value={devoirFormData.classe} onValueChange={(value) => setDevoirFormData({...devoirFormData, classe: value})}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {classes.map(classe => (
+                              <SelectItem key={classe} value={classe}>{classe}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date_echeance">Échéance</Label>
+                        <Input
+                          id="date_echeance"
+                          type="date"
+                          value={devoirFormData.date_echeance}
+                          onChange={(e) => setDevoirFormData({...devoirFormData, date_echeance: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="note_sur">Note sur</Label>
+                        <Input
+                          id="note_sur"
+                          type="number"
+                          step="0.5"
+                          min="1"
+                          max="100"
+                          value={devoirFormData.note_sur}
+                          onChange={(e) => setDevoirFormData({...devoirFormData, note_sur: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="coefficient_devoir">Coefficient</Label>
+                        <Input
+                          id="coefficient_devoir"
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          max="5"
+                          value={devoirFormData.coefficient}
+                          onChange={(e) => setDevoirFormData({...devoirFormData, coefficient: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="fichier_consigne">Fichier de consignes (optionnel)</Label>
+                      <Input
+                        id="fichier_consigne"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setDevoirFormData({
+                              ...devoirFormData,
+                              fichier_consigne_url: 'temp_url'
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setShowCreateDevoir(false)}>
+                        Annuler
+                      </Button>
+                      <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                        Créer Devoir
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation onglets */}
+      <Tabs value={activeView} onValueChange={setActiveView}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ressources">Ressources Pédagogiques</TabsTrigger>
+          <TabsTrigger value="devoirs">
+            Devoirs
+            {user.role === 'eleve' && devoirs.length > 0 && (
+              <Badge variant="secondary" className="ml-2">{devoirs.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ressources">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ressources Disponibles ({ressources.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {ressources.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {ressources.map((ressource) => (
+                    <Card key={ressource._id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-medium text-lg">{ressource.titre}</h3>
+                            {getTypeRessourceBadge(ressource.type_ressource)}
+                          </div>
+                          
+                          {ressource.description && (
+                            <p className="text-gray-600 text-sm">{ressource.description}</p>
+                          )}
+                          
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <Badge variant="outline">{ressource.matiere}</Badge>
+                            <Badge variant="outline">{ressource.classe}</Badge>
+                          </div>
+                          
+                          {ressource.enseignant && (
+                            <p className="text-xs text-gray-500">
+                              Par {ressource.enseignant.nom} {ressource.enseignant.prenoms}
+                            </p>
+                          )}
+                          
+                          {ressource.fichier_nom && (
+                            <div className="flex items-center text-sm text-blue-600">
+                              <FileText className="h-4 w-4 mr-1" />
+                              {ressource.fichier_nom}
+                            </div>
+                          )}
+                          
+                          <p className="text-xs text-gray-400">
+                            Publié le {new Date(ressource.date_publication).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">Aucune ressource disponible</p>
+                  {(user.role === 'administrateur' || user.role === 'enseignant') && (
+                    <p className="text-gray-400 text-sm mt-2">Commencez par publier des ressources pédagogiques</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="devoirs">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {user.role === 'eleve' ? 'Mes Devoirs' : 'Devoirs Assignés'} ({devoirs.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {devoirs.length > 0 ? (
+                <div className="space-y-4">
+                  {devoirs.map((devoir) => (
+                    <Card key={devoir._id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-lg">{devoir.titre}</h3>
+                            <p className="text-gray-600 text-sm mt-1">{devoir.description}</p>
+                          </div>
+                          {getStatutDevoir(devoir)}
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-700">Matière:</span>
+                            <p>{devoir.matiere}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Classe:</span>
+                            <p>{devoir.classe}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Échéance:</span>
+                            <p>{new Date(devoir.date_echeance).toLocaleDateString('fr-FR')}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Note sur:</span>
+                            <p>{devoir.note_sur} (coef {devoir.coefficient})</p>
+                          </div>
+                        </div>
+
+                        {devoir.consignes && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded">
+                            <p className="font-medium text-sm text-gray-700">Consignes:</p>
+                            <p className="text-sm mt-1">{devoir.consignes}</p>
+                          </div>
+                        )}
+
+                        {user.role === 'eleve' && (
+                          <div className="mt-4 flex justify-end">
+                            {(!devoir.mon_rendu || devoir.mon_rendu.length === 0) && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDevoir(devoir);
+                                  setShowRendreDevoir(true);
+                                }}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Rendre le devoir
+                              </Button>
+                            )}
+                          </div>
+                        )}
+
+                        {devoir.enseignant && (
+                          <p className="text-xs text-gray-500 mt-3">
+                            Assigné par {devoir.enseignant.nom} {devoir.enseignant.prenoms}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">
+                    {user.role === 'eleve' ? 'Aucun devoir assigné' : 'Aucun devoir créé'}
+                  </p>
+                  {(user.role === 'administrateur' || user.role === 'enseignant') && (
+                    <p className="text-gray-400 text-sm mt-2">Créez des devoirs pour vos élèves</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog pour rendre un devoir */}
+      <Dialog open={showRendreDevoir} onOpenChange={setShowRendreDevoir}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rendre le devoir</DialogTitle>
+            <DialogDescription>
+              {selectedDevoir?.titre}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRendreDevoir} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fichier_rendu">Fichier de rendu</Label>
+              <Input
+                id="fichier_rendu"
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setRenduFormData({
+                      ...renduFormData,
+                      fichier_rendu_url: 'temp_url',
+                      fichier_rendu_nom: file.name
+                    });
+                  }
+                }}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="commentaire_eleve">Commentaire (optionnel)</Label>
+              <textarea
+                id="commentaire_eleve"
+                className="w-full p-2 border border-gray-300 rounded-md"
+                rows="3"
+                value={renduFormData.commentaire_eleve}
+                onChange={(e) => setRenduFormData({...renduFormData, commentaire_eleve: e.target.value})}
+                placeholder="Commentaire sur votre travail..."
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setShowRendreDevoir(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                Rendre le devoir
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 // Composant Administration (réservé aux administrateurs)
 const AdministrationComponent = ({ user }) => {
   const [codeGenere, setCodeGenere] = useState(null);
