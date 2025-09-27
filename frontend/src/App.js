@@ -84,6 +84,11 @@ const AuthComponent = ({ onAuthSuccess }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleGoogleAuth = () => {
+    const redirectUrl = encodeURIComponent(window.location.origin);
+    window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 p-4">
       <Card className="w-full max-w-md">
