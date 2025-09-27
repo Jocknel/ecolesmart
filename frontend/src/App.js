@@ -179,6 +179,7 @@ const AuthComponent = ({ onAuthSuccess }) => {
                     <SelectContent>
                       <SelectItem value="parent">Parent</SelectItem>
                       <SelectItem value="enseignant">Enseignant</SelectItem>
+                      <SelectItem value="eleve">Élève</SelectItem>
                       <SelectItem value="administrateur">Administrateur (Code requis)</SelectItem>
                     </SelectContent>
                   </Select>
