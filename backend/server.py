@@ -1568,6 +1568,375 @@ async def delete_cours_emploi(cours_id: str, current_user: dict = Depends(get_cu
     
     return {"message": "Cours supprimé de l'emploi du temps"}
 
+# Routes de gestion des ressources pédagogiques
+@api_router.post("/ressources")
+async def create_ressource(ressource_data: RessourceCreate, current_user: dict = Depends(get_current_user)):
+    """Créer une nouvelle ressource pédagogique"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    ressource_doc = {
+        "_id": str(uuid.uuid4()),
+        "titre": ressource_data.titre,
+        "description": ressource_data.description,
+        "type_ressource": ressource_data.type_ressource,
+        "matiere": ressource_data.matiere,
+        "classe": ressource_data.classe,
+        "fichier_url": ressource_data.fichier_url,
+        "fichier_nom": ressource_data.fichier_nom,
+        "fichier_type": ressource_data.fichier_type,
+        "taille_fichier": ressource_data.taille_fichier,
+        "visible_eleves": ressource_data.visible_eleves,
+        "date_publication": ressource_data.date_publication.isoformat(),
+        "enseignant_id": current_user["_id"],
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.ressources.insert_one(ressource_doc)
+    
+    return {"message": "Ressource créée avec succès", "ressource": ressource_doc}
+
+@api_router.get("/ressources")
+async def list_ressources(
+    matiere: Optional[str] = None,
+    classe: Optional[str] = None,
+    type_ressource: Optional[str] = None,
+    enseignant_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste des ressources avec filtres"""
+    
+    filter_query = {}
+    
+    # Filtrage selon le rôle
+    if current_user["role"] == "eleve":
+        # Les élèves ne voient que les ressources visibles
+        filter_query["visible_eleves"] = True
+        # TODO: Filtrer par la classe de l'élève
+    
+    if matiere:
+        filter_query["matiere"] = matiere
+    
+    if classe:
+        filter_query["classe"] = classe
+    
+    if type_ressource:
+        filter_query["type_ressource"] = type_ressource
+    
+    if enseignant_id:
+        filter_query["enseignant_id"] = enseignant_id
+    
+    # Pipeline pour inclure les infos enseignant
+    pipeline = [
+        {"$match": filter_query},
+        {"$lookup": {
+            "from": "users",
+            "localField": "enseignant_id",
+            "foreignField": "_id",
+            "as": "enseignant"
+        }},
+        {"$unwind": {"path": "$enseignant", "preserveNullAndEmptyArrays": True}},
+        {"$sort": {"date_publication": -1}}
+    ]
+    
+    cursor = db.ressources.aggregate(pipeline)
+    ressources = await cursor.to_list(length=None)
+    
+    # Conversion et nettoyage
+    for ressource in ressources:
+        ressource['_id'] = str(ressource['_id'])
+        if 'enseignant' in ressource and ressource['enseignant']:
+            ressource['enseignant']['_id'] = str(ressource['enseignant']['_id'])
+            ressource['enseignant'].pop('mot_de_passe', None)
+    
+    return {"ressources": ressources}
+
+# Routes de gestion des devoirs
+@api_router.post("/devoirs")
+async def create_devoir(devoir_data: DevoirCreate, current_user: dict = Depends(get_current_user)):
+    """Créer un nouveau devoir"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    devoir_doc = {
+        "_id": str(uuid.uuid4()),
+        "titre": devoir_data.titre,
+        "description": devoir_data.description,
+        "consignes": devoir_data.consignes,
+        "matiere": devoir_data.matiere,
+        "classe": devoir_data.classe,
+        "date_assignation": devoir_data.date_assignation.isoformat(),
+        "date_echeance": devoir_data.date_echeance.isoformat(),
+        "note_sur": devoir_data.note_sur,
+        "coefficient": devoir_data.coefficient,
+        "fichier_consigne_url": devoir_data.fichier_consigne_url,
+        "fichier_consigne_nom": devoir_data.fichier_consigne_nom,
+        "actif": devoir_data.actif,
+        "enseignant_id": current_user["_id"],
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.devoirs.insert_one(devoir_doc)
+    
+    return {"message": "Devoir créé avec succès", "devoir": devoir_doc}
+
+@api_router.get("/devoirs")
+async def list_devoirs(
+    matiere: Optional[str] = None,
+    classe: Optional[str] = None,
+    enseignant_id: Optional[str] = None,
+    eleve_id: Optional[str] = None,
+    actif_seulement: bool = True,
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste des devoirs avec filtres"""
+    
+    filter_query = {}
+    
+    if actif_seulement:
+        filter_query["actif"] = True
+    
+    if matiere:
+        filter_query["matiere"] = matiere
+    
+    if classe:
+        filter_query["classe"] = classe
+    
+    if enseignant_id:
+        filter_query["enseignant_id"] = enseignant_id
+    
+    # Pipeline avec informations des rendus si élève spécifié
+    if eleve_id:
+        pipeline = [
+            {"$match": filter_query},
+            {"$lookup": {
+                "from": "rendus_devoirs",
+                "let": {"devoir_id": "$_id"},
+                "pipeline": [
+                    {"$match": {
+                        "$expr": {
+                            "$and": [
+                                {"$eq": ["$devoir_id", "$$devoir_id"]},
+                                {"$eq": ["$eleve_id", eleve_id]}
+                            ]
+                        }
+                    }}
+                ],
+                "as": "mon_rendu"
+            }},
+            {"$lookup": {
+                "from": "users",
+                "localField": "enseignant_id",
+                "foreignField": "_id",
+                "as": "enseignant"
+            }},
+            {"$unwind": {"path": "$enseignant", "preserveNullAndEmptyArrays": True}},
+            {"$sort": {"date_echeance": 1}}
+        ]
+    else:
+        pipeline = [
+            {"$match": filter_query},
+            {"$lookup": {
+                "from": "users",
+                "localField": "enseignant_id",
+                "foreignField": "_id",
+                "as": "enseignant"
+            }},
+            {"$unwind": {"path": "$enseignant", "preserveNullAndEmptyArrays": True}},
+            {"$sort": {"date_assignation": -1}}
+        ]
+    
+    cursor = db.devoirs.aggregate(pipeline)
+    devoirs = await cursor.to_list(length=None)
+    
+    # Conversion et nettoyage
+    for devoir in devoirs:
+        devoir['_id'] = str(devoir['_id'])
+        if 'enseignant' in devoir and devoir['enseignant']:
+            devoir['enseignant']['_id'] = str(devoir['enseignant']['_id'])
+            devoir['enseignant'].pop('mot_de_passe', None)
+        
+        # Traiter les rendus de l'élève
+        if 'mon_rendu' in devoir and devoir['mon_rendu']:
+            devoir['mon_rendu'][0]['_id'] = str(devoir['mon_rendu'][0]['_id'])
+    
+    return {"devoirs": devoirs}
+
+@api_router.get("/devoirs/{devoir_id}")
+async def get_devoir(devoir_id: str, current_user: dict = Depends(get_current_user)):
+    """Détails d'un devoir avec les rendus"""
+    
+    # Pipeline pour récupérer le devoir avec tous les rendus
+    pipeline = [
+        {"$match": {"_id": devoir_id}},
+        {"$lookup": {
+            "from": "rendus_devoirs",
+            "localField": "_id",
+            "foreignField": "devoir_id",
+            "as": "rendus"
+        }},
+        {"$lookup": {
+            "from": "users",
+            "localField": "enseignant_id",
+            "foreignField": "_id",
+            "as": "enseignant"
+        }},
+        {"$unwind": {"path": "$enseignant", "preserveNullAndEmptyArrays": True}}
+    ]
+    
+    cursor = db.devoirs.aggregate(pipeline)
+    devoirs = await cursor.to_list(length=None)
+    
+    if not devoirs:
+        raise HTTPException(status_code=404, detail="Devoir introuvable")
+    
+    devoir = devoirs[0]
+    devoir['_id'] = str(devoir['_id'])
+    
+    # Nettoyer les données sensibles
+    if 'enseignant' in devoir and devoir['enseignant']:
+        devoir['enseignant']['_id'] = str(devoir['enseignant']['_id'])
+        devoir['enseignant'].pop('mot_de_passe', None)
+    
+    # Traiter les rendus
+    for rendu in devoir.get('rendus', []):
+        rendu['_id'] = str(rendu['_id'])
+    
+    return devoir
+
+# Routes de gestion des rendus de devoirs
+@api_router.post("/devoirs/{devoir_id}/rendre")
+async def rendre_devoir(devoir_id: str, rendu_data: RenduDevoirCreate, current_user: dict = Depends(get_current_user)):
+    """Rendre un devoir (élève ou parent pour l'élève)"""
+    
+    # Vérifier que le devoir existe
+    devoir = await db.devoirs.find_one({"_id": devoir_id})
+    if not devoir:
+        raise HTTPException(status_code=404, detail="Devoir introuvable")
+    
+    # Vérifier que l'échéance n'est pas dépassée
+    date_echeance = datetime.fromisoformat(devoir["date_echeance"]).date()
+    if date.today() > date_echeance:
+        raise HTTPException(status_code=400, detail="La date d'échéance est dépassée")
+    
+    # Déterminer l'élève concerné
+    eleve_id = current_user["_id"] if current_user["role"] == "eleve" else rendu_data.devoir_id  # TODO: Améliorer la logique
+    
+    # Vérifier si l'élève a déjà rendu ce devoir
+    existing_rendu = await db.rendus_devoirs.find_one({
+        "devoir_id": devoir_id,
+        "eleve_id": eleve_id
+    })
+    
+    if existing_rendu:
+        raise HTTPException(status_code=400, detail="Devoir déjà rendu")
+    
+    rendu_doc = {
+        "_id": str(uuid.uuid4()),
+        "devoir_id": devoir_id,
+        "eleve_id": eleve_id,
+        "commentaire_eleve": rendu_data.commentaire_eleve,
+        "fichier_rendu_url": rendu_data.fichier_rendu_url,
+        "fichier_rendu_nom": rendu_data.fichier_rendu_nom,
+        "fichier_rendu_type": rendu_data.fichier_rendu_type,
+        "taille_fichier": rendu_data.taille_fichier,
+        "date_rendu": datetime.now(timezone.utc),
+        "statut": "rendu",
+        "note": None,
+        "commentaire_enseignant": None,
+        "date_correction": None,
+        "date_creation": datetime.now(timezone.utc)
+    }
+    
+    await db.rendus_devoirs.insert_one(rendu_doc)
+    
+    return {"message": "Devoir rendu avec succès", "rendu": rendu_doc}
+
+@api_router.post("/rendus/{rendu_id}/noter")
+async def noter_rendu(rendu_id: str, notation_data: NotationRenduCreate, current_user: dict = Depends(get_current_user)):
+    """Noter un rendu de devoir (enseignant)"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # Récupérer le rendu avec le devoir associé
+    pipeline = [
+        {"$match": {"_id": rendu_id}},
+        {"$lookup": {
+            "from": "devoirs",
+            "localField": "devoir_id",
+            "foreignField": "_id",
+            "as": "devoir"
+        }},
+        {"$unwind": "$devoir"}
+    ]
+    
+    cursor = db.rendus_devoirs.aggregate(pipeline)
+    rendus = await cursor.to_list(length=None)
+    
+    if not rendus:
+        raise HTTPException(status_code=404, detail="Rendu introuvable")
+    
+    rendu = rendus[0]
+    devoir = rendu["devoir"]
+    
+    # Vérifier que la note ne dépasse pas le maximum
+    if notation_data.note > devoir["note_sur"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"La note ne peut pas dépasser {devoir['note_sur']}"
+        )
+    
+    # Mettre à jour le rendu avec la notation
+    await db.rendus_devoirs.update_one(
+        {"_id": rendu_id},
+        {
+            "$set": {
+                "note": notation_data.note,
+                "commentaire_enseignant": notation_data.commentaire_enseignant,
+                "date_correction": notation_data.date_correction.isoformat(),
+                "statut": "note",
+                "correcteur_id": current_user["_id"],
+                "date_modification": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Optionnel : Ajouter automatiquement cette note au système de notes général
+    note_generale = {
+        "_id": str(uuid.uuid4()),
+        "eleve_id": rendu["eleve_id"],
+        "matiere": devoir["matiere"],
+        "type_evaluation": "devoir",
+        "note": (notation_data.note / devoir["note_sur"]) * 20,  # Conversion sur 20
+        "coefficient": devoir["coefficient"],
+        "date_evaluation": notation_data.date_correction.isoformat(),
+        "trimestre": "T1",  # TODO: Déterminer le trimestre automatiquement
+        "annee_scolaire": "2024-2025",
+        "commentaire": f"Devoir: {devoir['titre']}",
+        "enseignant_id": current_user["_id"],
+        "devoir_id": devoir_id,
+        "rendu_id": rendu_id,
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.notes.insert_one(note_generale)
+    
+    return {"message": "Devoir noté avec succès", "note_sur_20": note_generale["note"]}
+
+@api_router.get("/mes-devoirs")
+async def get_mes_devoirs(current_user: dict = Depends(get_current_user)):
+    """Récupérer les devoirs de l'élève connecté"""
+    if current_user["role"] != "eleve":
+        raise HTTPException(status_code=403, detail="Accès réservé aux élèves")
+    
+    # TODO: Récupérer la classe de l'élève depuis son profil
+    # Pour l'instant, on retourne tous les devoirs
+    response = await list_devoirs(eleve_id=current_user["_id"], current_user=current_user)
+    return response
+
 @api_router.get("/calendrier/trimestres")
 async def get_trimestres_info(annee_scolaire: str = "2024-2025"):
     """Information sur les trimestres (compatibilité)"""
