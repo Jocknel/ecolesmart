@@ -148,10 +148,27 @@ const AuthComponent = ({ onAuthSuccess }) => {
                     <SelectContent>
                       <SelectItem value="parent">Parent</SelectItem>
                       <SelectItem value="enseignant">Enseignant</SelectItem>
-                      <SelectItem value="administrateur">Administrateur</SelectItem>
+                      <SelectItem value="administrateur">Administrateur (Code requis)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.role === 'administrateur' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="code_admin">Code Administrateur</Label>
+                    <Input
+                      id="code_admin"
+                      name="code_admin"
+                      value={formData.code_admin}
+                      onChange={handleInputChange}
+                      placeholder="Code spécial administrateur"
+                      required
+                    />
+                    <p className="text-xs text-gray-500">
+                      Contactez votre administrateur système pour obtenir ce code
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="telephone">Téléphone (optionnel)</Label>
