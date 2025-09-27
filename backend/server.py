@@ -256,6 +256,28 @@ async def register_user(user_data: UserCreate):
         # Pas besoin de code pour le premier admin
         user_data.code_admin = "PREMIER_ADMIN_2024"
     
+    # Vérification des codes temporaires pour les administrateurs
+    elif user_data.role == "administrateur" and user_data.code_admin:
+        if user_data.code_admin.startswith('ADMIN_') and user_data.code_admin not in ['ADMIN_ECOLE_2024', 'PREMIER_ADMIN_2024']:
+            # Vérifier si c'est un code temporaire valide
+            code_temp = await db.codes_admin_temp.find_one({
+                "code": user_data.code_admin,
+                "utilise": False,
+                "date_expiration": {"$gt": datetime.now(timezone.utc)}
+            })
+            
+            if not code_temp:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Code administrateur invalide ou expiré"
+                )
+            
+            # Marquer le code comme utilisé
+            await db.codes_admin_temp.update_one(
+                {"_id": code_temp["_id"]},
+                {"$set": {"utilise": True, "utilise_par": user_data.email, "date_utilisation": datetime.now(timezone.utc)}}
+            )
+    
     # Création de l'utilisateur
     hashed_password = get_password_hash(user_data.mot_de_passe)
     user_doc = {
