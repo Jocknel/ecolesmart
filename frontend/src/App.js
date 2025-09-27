@@ -3857,6 +3857,7 @@ const App = () => {
           {activeTab === 'eleves' && <ElevesComponent user={user} />}
           {activeTab === 'notes' && <NotesComponent user={user} />}
           {activeTab === 'bulletins' && <BulletinsComponent user={user} />}
+          {activeTab === 'devoirs-ressources' && <DevoirsRessourcesComponent user={user} />}
           {activeTab === 'emplois-du-temps' && <EmploisDuTempsComponent user={user} />}
           {activeTab === 'calendrier' && <CalendrierComponent user={user} />}
           {activeTab === 'factures' && <FacturesComponent user={user} />}
