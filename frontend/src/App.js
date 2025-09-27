@@ -1780,7 +1780,7 @@ const NotesComponent = ({ user }) => {
                   <SelectValue placeholder="Tous les élèves" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les élèves</SelectItem>
+                  <SelectItem value="all">Tous les élèves</SelectItem>
                   {eleves.map(eleve => (
                     <SelectItem key={eleve._id} value={eleve._id}>
                       {eleve.nom} {eleve.prenoms} - {eleve.classe}
