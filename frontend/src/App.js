@@ -270,6 +270,7 @@ const Sidebar = ({ activeTab, setActiveTab, user, onLogout }) => {
     { id: 'eleves', label: 'Élèves', icon: Users },
     { id: 'notes', label: 'Notes & Moyennes', icon: BookOpen },
     { id: 'bulletins', label: 'Bulletins', icon: FileText },
+    { id: 'devoirs-ressources', label: 'Devoirs & Ressources', icon: FileText },
     { id: 'emplois-du-temps', label: 'Emplois du temps', icon: Calendar },
     { id: 'calendrier', label: 'Calendrier', icon: Calendar },
     { id: 'factures', label: 'Factures', icon: FileText },
