@@ -74,8 +74,10 @@ class UserCreate(BaseModel):
     
     @validator('telephone')
     def validate_phone(cls, v):
-        if v and not re.match(r"^(\+224|224)?[6-7][0-9]{7}$", re.sub(r"[\s\-\.]", "", v)):
-            raise ValueError('Format de numéro guinéen invalide')
+        if v:
+            clean_phone = re.sub(r"[\s\-\.]", "", v)
+            if not re.match(r"^(\+224|224)?[6-7][0-9]{7}$", clean_phone):
+                raise ValueError('Format de numéro guinéen invalide')
         return v
 
 class UserLogin(BaseModel):
