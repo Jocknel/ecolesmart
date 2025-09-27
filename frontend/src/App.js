@@ -39,6 +39,21 @@ const AuthComponent = ({ onAuthSuccess }) => {
     setLoading(true);
 
     try {
+      // Validation côté client pour l'inscription
+      if (!isLogin) {
+        if (formData.mot_de_passe !== formData.confirmer_mot_de_passe) {
+          toast.error('Les mots de passe ne correspondent pas');
+          setLoading(false);
+          return;
+        }
+        
+        if (formData.role === 'administrateur' && !formData.code_admin) {
+          toast.error('Code administrateur requis pour ce rôle');
+          setLoading(false);
+          return;
+        }
+      }
+
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const response = await axios.post(endpoint, formData);
       
@@ -50,7 +65,16 @@ const AuthComponent = ({ onAuthSuccess }) => {
         toast.success(isLogin ? 'Connexion réussie!' : 'Inscription réussie!');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur d\'authentification');
+      const errorMessage = error.response?.data?.detail;
+      if (typeof errorMessage === 'string') {
+        toast.error(errorMessage);
+      } else if (Array.isArray(errorMessage)) {
+        // Gestion des erreurs de validation Pydantic
+        const firstError = errorMessage[0];
+        toast.error(firstError?.msg || 'Erreur de validation');
+      } else {
+        toast.error('Erreur d\'authentification');
+      }
     } finally {
       setLoading(false);
     }
