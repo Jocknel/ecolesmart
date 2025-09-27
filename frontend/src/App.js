@@ -1929,7 +1929,7 @@ const BulletinsComponent = ({ user }) => {
   };
 
   const genererBulletin = async () => {
-    if (!selectedEleve) {
+    if (!selectedEleve || selectedEleve === 'all') {
       toast.error('Veuillez sélectionner un élève');
       return;
     }
