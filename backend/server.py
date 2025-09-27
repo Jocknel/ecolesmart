@@ -300,6 +300,124 @@ async def login_user(user_credentials: UserLogin):
         "user": user_response
     }
 
+@api_router.post("/auth/google/session")
+async def process_google_session(session_request: GoogleSessionRequest):
+    """Traite la session Google OAuth via Emergent Auth"""
+    try:
+        # Appel à l'API Emergent pour récupérer les données de session
+        headers = {"X-Session-ID": session_request.session_id}
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers=headers
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Session ID invalide ou expirée"
+                )
+            
+            session_data = response.json()
+            email = session_data.get("email")
+            name = session_data.get("name", "")
+            session_token = session_data.get("session_token")
+            
+            if not email or not session_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Données de session incomplètes"
+                )
+            
+            # Vérifier si l'utilisateur existe
+            existing_user = await db.users.find_one({"email": email})
+            
+            if existing_user:
+                # Utilisateur existant - mise à jour du session_token
+                await db.users.update_one(
+                    {"email": email},
+                    {
+                        "$set": {
+                            "session_token": session_token,
+                            "session_expires": datetime.now(timezone.utc) + timedelta(days=7),
+                            "date_modification": datetime.now(timezone.utc)
+                        }
+                    }
+                )
+                user_doc = existing_user
+            else:
+                # Nouvel utilisateur - création avec rôle Parent par défaut
+                name_parts = name.split(' ', 1)
+                nom = name_parts[0] if name_parts else "Utilisateur"
+                prenoms = name_parts[1] if len(name_parts) > 1 else "Google"
+                
+                user_doc = {
+                    "_id": str(uuid.uuid4()),
+                    "email": email,
+                    "nom": nom,
+                    "prenoms": prenoms,
+                    "role": "parent",  # Rôle par défaut pour Google OAuth
+                    "telephone": None,
+                    "actif": True,
+                    "auth_method": "google",
+                    "session_token": session_token,
+                    "session_expires": datetime.now(timezone.utc) + timedelta(days=7),
+                    "date_creation": datetime.now(timezone.utc),
+                    "date_modification": datetime.now(timezone.utc)
+                }
+                
+                await db.users.insert_one(user_doc)
+            
+            # Génération du JWT token pour notre système
+            access_token = create_access_token(data={"sub": email})
+            
+            # Préparation de la réponse
+            user_response = {k: str(v) if isinstance(v, ObjectId) else v for k, v in user_doc.items() 
+                           if k not in ["mot_de_passe", "session_token"]}
+            
+            return {
+                "access_token": access_token,
+                "token_type": "bearer", 
+                "user": user_response,
+                "session_token": session_token
+            }
+            
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail="Délai d'attente dépassé lors de la vérification de session"
+        )
+    except Exception as e:
+        logger.error(f"Erreur traitement session Google: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors du traitement de l'authentification Google"
+        )
+
+@api_router.post("/auth/logout")
+async def logout_user(current_user: dict = Depends(get_current_user)):
+    """Déconnexion - supprime le session_token si Google Auth"""
+    try:
+        if current_user.get("auth_method") == "google" and current_user.get("session_token"):
+            # Suppression du session_token pour les utilisateurs Google
+            await db.users.update_one(
+                {"email": current_user["email"]},
+                {
+                    "$unset": {"session_token": "", "session_expires": ""},
+                    "$set": {"date_modification": datetime.now(timezone.utc)}
+                }
+            )
+        
+        return {"message": "Déconnexion réussie"}
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la déconnexion: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de la déconnexion"
+        )
+
 # Routes de gestion des élèves
 @api_router.post("/eleves")
 async def create_eleve(eleve_data: EleveCreate, current_user: dict = Depends(get_current_user)):
