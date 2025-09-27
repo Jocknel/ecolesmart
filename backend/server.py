@@ -914,6 +914,263 @@ async def generer_code_admin(current_user: dict = Depends(get_current_user)):
         "message": f"Code généré par {current_user['nom']} {current_user['prenoms']}"
     }
 
+# Routes de gestion des matières
+@api_router.post("/matieres")
+async def create_matiere(matiere_data: MatiereCreate, current_user: dict = Depends(get_current_user)):
+    """Créer une nouvelle matière"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # Vérification si la matière existe déjà
+    existing_matiere = await db.matieres.find_one({"code": matiere_data.code})
+    if existing_matiere:
+        raise HTTPException(status_code=400, detail="Une matière avec ce code existe déjà")
+    
+    matiere_doc = {
+        "_id": str(uuid.uuid4()),
+        "nom": matiere_data.nom,
+        "code": matiere_data.code,
+        "coefficient": matiere_data.coefficient,
+        "enseignant_id": matiere_data.enseignant_id,
+        "classes": matiere_data.classes,
+        "couleur": matiere_data.couleur,
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.matieres.insert_one(matiere_doc)
+    
+    return {"message": "Matière créée avec succès", "matiere": matiere_doc}
+
+@api_router.get("/matieres")
+async def list_matieres(current_user: dict = Depends(get_current_user)):
+    """Liste des matières"""
+    matieres = await db.matieres.find().to_list(length=None)
+    for matiere in matieres:
+        matiere['_id'] = str(matiere['_id'])
+    return {"matieres": matieres}
+
+# Routes de gestion des notes
+@api_router.post("/notes")
+async def create_note(note_data: NoteCreate, current_user: dict = Depends(get_current_user)):
+    """Créer une nouvelle note"""
+    if current_user["role"] not in ["administrateur", "enseignant"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # Vérification de l'élève
+    eleve = await db.eleves.find_one({"_id": note_data.eleve_id})
+    if not eleve:
+        raise HTTPException(status_code=404, detail="Élève introuvable")
+    
+    # Vérification de la matière
+    matiere = await db.matieres.find_one({"nom": note_data.matiere})
+    if not matiere:
+        raise HTTPException(status_code=404, detail="Matière introuvable")
+    
+    note_doc = {
+        "_id": str(uuid.uuid4()),
+        "eleve_id": note_data.eleve_id,
+        "matiere": note_data.matiere,
+        "type_evaluation": note_data.type_evaluation,
+        "note": note_data.note,
+        "coefficient": note_data.coefficient,
+        "date_evaluation": note_data.date_evaluation.isoformat(),
+        "trimestre": note_data.trimestre,
+        "annee_scolaire": note_data.annee_scolaire,
+        "commentaire": note_data.commentaire,
+        "enseignant_id": current_user["_id"],
+        "date_creation": datetime.now(timezone.utc),
+        "date_modification": datetime.now(timezone.utc)
+    }
+    
+    await db.notes.insert_one(note_doc)
+    
+    return {"message": "Note enregistrée avec succès", "note": note_doc}
+
+@api_router.get("/notes")
+async def list_notes(
+    eleve_id: Optional[str] = None,
+    matiere: Optional[str] = None,
+    trimestre: Optional[str] = None,
+    annee_scolaire: str = "2024-2025",
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste des notes avec filtres"""
+    filter_query = {"annee_scolaire": annee_scolaire}
+    
+    if eleve_id:
+        filter_query["eleve_id"] = eleve_id
+    
+    if matiere:
+        filter_query["matiere"] = matiere
+    
+    if trimestre:
+        filter_query["trimestre"] = trimestre
+    
+    # Pipeline d'agrégation pour inclure les infos élève
+    pipeline = [
+        {"$match": filter_query},
+        {"$lookup": {
+            "from": "eleves",
+            "localField": "eleve_id",
+            "foreignField": "_id",
+            "as": "eleve"
+        }},
+        {"$unwind": {"path": "$eleve", "preserveNullAndEmptyArrays": True}},
+        {"$sort": {"date_evaluation": -1}}
+    ]
+    
+    cursor = db.notes.aggregate(pipeline)
+    notes = await cursor.to_list(length=None)
+    
+    for note in notes:
+        note['_id'] = str(note['_id'])
+        if 'eleve' in note and note['eleve']:
+            note['eleve']['_id'] = str(note['eleve']['_id'])
+    
+    return {"notes": notes}
+
+@api_router.get("/notes/moyennes/{eleve_id}")
+async def calculate_moyennes(
+    eleve_id: str, 
+    trimestre: Optional[str] = None,
+    annee_scolaire: str = "2024-2025",
+    current_user: dict = Depends(get_current_user)
+):
+    """Calcul des moyennes d'un élève"""
+    
+    # Vérification de l'élève
+    eleve = await db.eleves.find_one({"_id": eleve_id})
+    if not eleve:
+        raise HTTPException(status_code=404, detail="Élève introuvable")
+    
+    filter_query = {"eleve_id": eleve_id, "annee_scolaire": annee_scolaire}
+    if trimestre:
+        filter_query["trimestre"] = trimestre
+    
+    # Pipeline pour calculer les moyennes par matière
+    pipeline = [
+        {"$match": filter_query},
+        {
+            "$group": {
+                "_id": {"matiere": "$matiere", "trimestre": "$trimestre"},
+                "moyenne": {
+                    "$avg": {
+                        "$multiply": ["$note", "$coefficient"]
+                    }
+                },
+                "coefficient_total": {"$sum": "$coefficient"},
+                "nb_notes": {"$sum": 1},
+                "notes": {"$push": {
+                    "note": "$note",
+                    "coefficient": "$coefficient",
+                    "type_evaluation": "$type_evaluation",
+                    "date_evaluation": "$date_evaluation"
+                }}
+            }
+        },
+        {
+            "$project": {
+                "matiere": "$_id.matiere",
+                "trimestre": "$_id.trimestre",
+                "moyenne": {"$round": ["$moyenne", 2]},
+                "coefficient_total": 1,
+                "nb_notes": 1,
+                "notes": 1,
+                "_id": 0
+            }
+        },
+        {"$sort": {"trimestre": 1, "matiere": 1}}
+    ]
+    
+    cursor = db.notes.aggregate(pipeline)
+    moyennes_matiere = await cursor.to_list(length=None)
+    
+    # Calcul de la moyenne générale
+    if moyennes_matiere:
+        total_points = sum(m["moyenne"] * m["coefficient_total"] for m in moyennes_matiere)
+        total_coefficients = sum(m["coefficient_total"] for m in moyennes_matiere)
+        moyenne_generale = round(total_points / total_coefficients, 2) if total_coefficients > 0 else 0
+    else:
+        moyenne_generale = 0
+    
+    return {
+        "eleve": {
+            "_id": str(eleve["_id"]),
+            "nom": eleve["nom"],
+            "prenoms": eleve["prenoms"],
+            "classe": eleve["classe"]
+        },
+        "moyennes_par_matiere": moyennes_matiere,
+        "moyenne_generale": moyenne_generale,
+        "trimestre": trimestre,
+        "annee_scolaire": annee_scolaire
+    }
+
+@api_router.post("/bulletins/generer")
+async def generer_bulletin(bulletin_request: BulletinRequest, current_user: dict = Depends(get_current_user)):
+    """Générer un bulletin scolaire"""
+    
+    # Récupération des données complètes
+    moyennes_response = await calculate_moyennes(
+        bulletin_request.eleve_id,
+        bulletin_request.trimestre,
+        bulletin_request.annee_scolaire,
+        current_user
+    )
+    
+    # Récupération des présences
+    presences_filter = {
+        "eleve_id": bulletin_request.eleve_id,
+        "date_cours": {
+            "$regex": f"^{bulletin_request.annee_scolaire.split('-')[0]}"
+        }
+    }
+    
+    cursor = db.presences.find(presences_filter)
+    presences = await cursor.to_list(length=None)
+    
+    # Calcul des absences par trimestre (approximatif)
+    absences = len([p for p in presences if not p.get("present", True)])
+    total_cours = len(presences)
+    taux_presence = round((total_cours - absences) / total_cours * 100, 1) if total_cours > 0 else 100
+    
+    bulletin_data = {
+        "eleve": moyennes_response["eleve"],
+        "trimestre": bulletin_request.trimestre,
+        "annee_scolaire": bulletin_request.annee_scolaire,
+        "moyennes_par_matiere": moyennes_response["moyennes_par_matiere"],
+        "moyenne_generale": moyennes_response["moyenne_generale"],
+        "presences": {
+            "total_cours": total_cours,
+            "absences": absences,
+            "taux_presence": taux_presence
+        },
+        "appreciation": generer_appreciation(moyennes_response["moyenne_generale"]),
+        "date_generation": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if bulletin_request.format_export == "csv":
+        return {"bulletin_data": bulletin_data, "format": "json"}
+    else:
+        # Pour le PDF, on retourne les données pour générer côté frontend
+        return {"bulletin_data": bulletin_data, "format": "pdf"}
+
+def generer_appreciation(moyenne_generale: float) -> str:
+    """Génère une appréciation basée sur la moyenne générale"""
+    if moyenne_generale >= 16:
+        return "Excellent travail. Félicitations !"
+    elif moyenne_generale >= 14:
+        return "Très bon travail. Continue ainsi !"
+    elif moyenne_generale >= 12:
+        return "Bon travail. Peut mieux faire."
+    elif moyenne_generale >= 10:
+        return "Travail satisfaisant. Efforts à poursuivre."
+    elif moyenne_generale >= 8:
+        return "Travail insuffisant. Doit redoubler d'efforts."
+    else:
+        return "Travail très insuffisant. Aide et soutien nécessaires."
+
 # Routes de gestion des présences
 @api_router.post("/presences")
 async def create_presence(presence_data: PresenceCreate, current_user: dict = Depends(get_current_user)):
