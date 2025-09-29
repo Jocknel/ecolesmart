@@ -2265,6 +2265,336 @@ async def marquer_notification_lue(notification_id: str, current_user: dict = De
     
     return {"message": "Notification marquée comme lue"}
 
+# Routes améliorées pour Finance & Payments
+@api_router.post("/factures/{facture_id}/generer-recu")
+async def generer_recu_paiement(facture_id: str, current_user: dict = Depends(get_current_user)):
+    """Générer un reçu de paiement pour une facture"""
+    
+    # Récupérer la facture avec l'élève
+    pipeline = [
+        {"$match": {"_id": facture_id}},
+        {"$lookup": {
+            "from": "eleves",
+            "localField": "eleve_id",
+            "foreignField": "_id",
+            "as": "eleve"
+        }},
+        {"$lookup": {
+            "from": "paiements",
+            "localField": "_id",
+            "foreignField": "facture_id",
+            "as": "paiements"
+        }},
+        {"$unwind": {"path": "$eleve", "preserveNullAndEmptyArrays": True}}
+    ]
+    
+    cursor = db.factures.aggregate(pipeline)
+    factures = await cursor.to_list(length=None)
+    
+    if not factures:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    
+    facture = factures[0]
+    
+    # Filtrer seulement les paiements réussis
+    paiements_reussis = [p for p in facture.get('paiements', []) if p.get('statut') == 'reussi']
+    
+    if not paiements_reussis:
+        raise HTTPException(status_code=400, detail="Aucun paiement réussi pour cette facture")
+    
+    # Générer le reçu
+    numero_recu = f"RECU_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6].upper()}"
+    
+    recu_data = {
+        "numero_recu": numero_recu,
+        "facture": {
+            "numero": facture["numero_facture"],
+            "titre": facture["titre"],
+            "montant_total": facture["montant_total"],
+            "montant_paye": facture["montant_paye"]
+        },
+        "eleve": {
+            "nom": facture["eleve"]["nom"],
+            "prenoms": facture["eleve"]["prenoms"],
+            "classe": facture["eleve"]["classe"],
+            "matricule": facture["eleve"]["matricule"]
+        },
+        "paiements": [
+            {
+                "date": p["date_completion"] if "date_completion" in p else p["date_initiation"],
+                "montant": p["montant"],
+                "methode": p["methode_paiement"],
+                "reference": p.get("reference_operateur", p["reference_interne"])
+            }
+            for p in paiements_reussis
+        ],
+        "total_paye": sum(p["montant"] for p in paiements_reussis),
+        "date_generation": datetime.now(timezone.utc).isoformat(),
+        "statut_facture": facture["statut"]
+    }
+    
+    return {
+        "message": "Reçu généré avec succès",
+        "recu": recu_data
+    }
+
+@api_router.get("/finances/rapports")
+async def generer_rapport_financier(
+    type_rapport: str = Query("mensuel", pattern="^(quotidien|hebdomadaire|mensuel|trimestriel|annuel)$"),
+    mois: Optional[int] = Query(None, ge=1, le=12),
+    annee: int = Query(default=2025, ge=2020, le=2030),
+    classe: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Générer des rapports financiers pour les administrateurs"""
+    
+    if current_user["role"] != "administrateur":
+        raise HTTPException(status_code=403, detail="Accès refusé - Administrateur seulement")
+    
+    # Définir la période selon le type de rapport
+    now = datetime.now(timezone.utc)
+    
+    if type_rapport == "quotidien":
+        debut_periode = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        fin_periode = debut_periode + timedelta(days=1)
+    elif type_rapport == "hebdomadaire":
+        debut_semaine = now - timedelta(days=now.weekday())
+        debut_periode = debut_semaine.replace(hour=0, minute=0, second=0, microsecond=0)
+        fin_periode = debut_periode + timedelta(days=7)
+    elif type_rapport == "mensuel":
+        if mois:
+            debut_periode = datetime(annee, mois, 1, tzinfo=timezone.utc)
+            if mois == 12:
+                fin_periode = datetime(annee + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                fin_periode = datetime(annee, mois + 1, 1, tzinfo=timezone.utc)
+        else:
+            debut_periode = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            fin_periode = (debut_periode + timedelta(days=32)).replace(day=1)
+    
+    # Requêtes d'agrégation pour les statistiques
+    periode_filter = {
+        "date_creation": {
+            "$gte": debut_periode.isoformat(),
+            "$lt": fin_periode.isoformat()
+        }
+    }
+    
+    # 1. Statistiques des factures
+    pipeline_factures = [
+        {"$match": periode_filter},
+        {"$group": {
+            "_id": "$statut",
+            "count": {"$sum": 1},
+            "montant_total": {"$sum": "$montant_total"},
+            "montant_paye": {"$sum": "$montant_paye"}
+        }}
+    ]
+    
+    cursor = db.factures.aggregate(pipeline_factures)
+    stats_factures = await cursor.to_list(length=None)
+    
+    # 2. Statistiques des paiements
+    pipeline_paiements = [
+        {"$match": {**periode_filter, "statut": "reussi"}},
+        {"$group": {
+            "_id": "$operateur",
+            "count": {"$sum": 1},
+            "montant_total": {"$sum": "$montant"}
+        }}
+    ]
+    
+    cursor = db.paiements.aggregate(pipeline_paiements)
+    stats_paiements = await cursor.to_list(length=None)
+    
+    # 3. Créances par classe
+    pipeline_creances = [
+        {"$match": {"statut": {"$in": ["emise", "payee_partiellement"]}}},
+        {"$lookup": {
+            "from": "eleves",
+            "localField": "eleve_id",
+            "foreignField": "_id",
+            "as": "eleve"
+        }},
+        {"$unwind": "$eleve"},
+        {"$group": {
+            "_id": "$eleve.classe",
+            "nombre_factures": {"$sum": 1},
+            "montant_du": {"$sum": "$montant_restant"}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    if classe:
+        pipeline_creances[0]["$match"]["eleve.classe"] = classe
+    
+    cursor = db.factures.aggregate(pipeline_creances)
+    creances_par_classe = await cursor.to_list(length=None)
+    
+    # 4. Évolution mensuelle (si rapport annuel)
+    evolution_mensuelle = []
+    if type_rapport in ["trimestriel", "annuel"]:
+        for mois_num in range(1, 13):
+            debut_mois = datetime(annee, mois_num, 1, tzinfo=timezone.utc)
+            if mois_num == 12:
+                fin_mois = datetime(annee + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                fin_mois = datetime(annee, mois_num + 1, 1, tzinfo=timezone.utc)
+            
+            montant_mois = await db.paiements.aggregate([
+                {"$match": {
+                    "date_creation": {
+                        "$gte": debut_mois.isoformat(),
+                        "$lt": fin_mois.isoformat()
+                    },
+                    "statut": "reussi"
+                }},
+                {"$group": {"_id": None, "total": {"$sum": "$montant"}}}
+            ]).to_list(length=None)
+            
+            evolution_mensuelle.append({
+                "mois": mois_num,
+                "nom_mois": debut_mois.strftime("%B"),
+                "montant": montant_mois[0]["total"] if montant_mois else 0
+            })
+    
+    # 5. Top 10 des retardataires
+    pipeline_retardataires = [
+        {"$match": {
+            "statut": {"$in": ["emise", "payee_partiellement"]},
+            "date_echeance": {"$lt": datetime.now(timezone.utc).isoformat()}
+        }},
+        {"$lookup": {
+            "from": "eleves",
+            "localField": "eleve_id",
+            "foreignField": "_id",
+            "as": "eleve"
+        }},
+        {"$unwind": "$eleve"},
+        {"$group": {
+            "_id": "$eleve_id",
+            "eleve": {"$first": "$eleve"},
+            "nombre_factures": {"$sum": 1},
+            "montant_du": {"$sum": "$montant_restant"},
+            "retard_moyen": {"$avg": {
+                "$subtract": [
+                    {"$dateFromString": {"dateString": {"$literal": datetime.now(timezone.utc).isoformat()}}},
+                    {"$dateFromString": {"dateString": "$date_echeance"}}
+                ]
+            }}
+        }},
+        {"$sort": {"montant_du": -1}},
+        {"$limit": 10}
+    ]
+    
+    cursor = db.factures.aggregate(pipeline_retardataires)
+    retardataires = await cursor.to_list(length=None)
+    
+    # Calculs de totaux généraux
+    total_factures = sum(stat["count"] for stat in stats_factures)
+    total_encaisse = sum(stat["montant_total"] for stat in stats_paiements)
+    total_creances = sum(creance["montant_du"] for creance in creances_par_classe)
+    
+    rapport = {
+        "type_rapport": type_rapport,
+        "periode": {
+            "debut": debut_periode.isoformat(),
+            "fin": fin_periode.isoformat(),
+            "mois": mois,
+            "annee": annee
+        },
+        "resume_executif": {
+            "total_factures_emises": total_factures,
+            "total_encaisse": total_encaisse,
+            "total_creances": total_creances,
+            "taux_recouvrement": round((total_encaisse / (total_encaisse + total_creances)) * 100, 2) if (total_encaisse + total_creances) > 0 else 0
+        },
+        "statistiques_factures": stats_factures,
+        "statistiques_paiements": stats_paiements,
+        "creances_par_classe": creances_par_classe,
+        "evolution_mensuelle": evolution_mensuelle,
+        "top_retardataires": retardataires,
+        "date_generation": datetime.now(timezone.utc).isoformat()
+    }
+    
+    return rapport
+
+@api_router.get("/finances/factures-en-retard")
+async def lister_factures_en_retard(
+    jours_retard: int = Query(default=7, ge=1),
+    classe: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lister les factures en retard avec notifications automatiques"""
+    
+    date_limite = datetime.now(timezone.utc) - timedelta(days=jours_retard)
+    
+    filter_query = {
+        "statut": {"$in": ["emise", "payee_partiellement"]},
+        "date_echeance": {"$lt": date_limite.isoformat()}
+    }
+    
+    # Pipeline avec informations complètes
+    pipeline = [
+        {"$match": filter_query},
+        {"$lookup": {
+            "from": "eleves",
+            "localField": "eleve_id",
+            "foreignField": "_id",
+            "as": "eleve"
+        }},
+        {"$unwind": "$eleve"},
+        {"$addFields": {
+            "jours_retard": {
+                "$divide": [
+                    {"$subtract": [
+                        {"$dateFromString": {"dateString": {"$literal": datetime.now(timezone.utc).isoformat()}}},
+                        {"$dateFromString": {"dateString": "$date_echeance"}}
+                    ]},
+                    86400000  # millisecondes en jour
+                ]
+            }
+        }},
+        {"$sort": {"jours_retard": -1}}
+    ]
+    
+    if classe:
+        pipeline[0]["$match"]["eleve.classe"] = classe
+    
+    cursor = db.factures.aggregate(pipeline)
+    factures_retard = await cursor.to_list(length=None)
+    
+    # Nettoyage et conversion
+    for facture in factures_retard:
+        facture['_id'] = str(facture['_id'])
+        facture['eleve']['_id'] = str(facture['eleve']['_id'])
+        facture['jours_retard'] = int(facture['jours_retard'])
+    
+    # Créer des notifications automatiques pour les parents (si administrateur)
+    if current_user["role"] == "administrateur":
+        for facture in factures_retard:
+            # Rechercher le parent de l'élève (simulation)
+            # TODO: Implémenter la liaison parent-élève
+            
+            # Créer notification de rappel
+            await creer_notification(
+                NotificationCreate(
+                    destinataire_id=facture["eleve_id"],  # Temporaire
+                    titre=f"Rappel de paiement - {facture['titre']}",
+                    message=f"La facture {facture['numero_facture']} est en retard de {facture['jours_retard']} jour(s). Montant dû: {facture['montant_restant']} GNF",
+                    type_notification="rappel",
+                    canaux=["app", "sms"],
+                    lien_action=f"/factures/{facture['_id']}"
+                ),
+                current_user
+            )
+    
+    return {
+        "factures_en_retard": factures_retard,
+        "total": len(factures_retard),
+        "montant_total_du": sum(f["montant_restant"] for f in factures_retard)
+    }
+
 @api_router.get("/calendrier/trimestres")
 async def get_trimestres_info(annee_scolaire: str = "2024-2025"):
     """Information sur les trimestres (compatibilité)"""
