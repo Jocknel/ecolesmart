@@ -585,9 +585,14 @@ const AuthComponent = ({ onAuthSuccess }) => {
                       id="nom"
                       name="nom"
                       value={formData.nom}
-                      onChange={handleInputChange}
+                      onChange={(e) => handleInputChange('nom', e.target.value)}
+                      placeholder="Votre nom de famille"
                       required
+                      className={fieldErrors.nom ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.nom && (
+                      <p className="text-sm text-red-500">{fieldErrors.nom}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="prenoms">Prénoms</Label>
@@ -595,9 +600,14 @@ const AuthComponent = ({ onAuthSuccess }) => {
                       id="prenoms"
                       name="prenoms"
                       value={formData.prenoms}
-                      onChange={handleInputChange}
+                      onChange={(e) => handleInputChange('prenoms', e.target.value)}
+                      placeholder="Vos prénoms"
                       required
+                      className={fieldErrors.prenoms ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.prenoms && (
+                      <p className="text-sm text-red-500">{fieldErrors.prenoms}</p>
+                    )}
                   </div>
                 </div>
 
