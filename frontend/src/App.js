@@ -3800,39 +3800,488 @@ const DevoirsRessourcesComponent = ({ user }) => {
 
 // Composant Administration Avancée (nouvelles fonctionnalités)
 const AdvancedAdministrationComponent = ({ user }) => {
+  const [showImportUsers, setShowImportUsers] = useState(false);
+  const [show2FAManagement, setShow2FAManagement] = useState(false);
+  const [showParentChildLink, setShowParentChildLink] = useState(false);
+  const [myChildren, setMyChildren] = useState([]);
+  const [twoFAEnabled, setTwoFAEnabled] = useState(user.twofa_active || false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [twoFASecret, setTwoFASecret] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // États pour l'import d'utilisateurs
+  const [csvFile, setCsvFile] = useState(null);
+  const [importPreview, setImportPreview] = useState([]);
+  const [importResults, setImportResults] = useState(null);
+
+  // États pour la liaison parent-enfant
+  const [linkFormData, setLinkFormData] = useState({
+    parent_email: user.role === 'parent' ? user.email : '',
+    eleve_id: '',
+    relation: 'parent'
+  });
+  const [eleves, setEleves] = useState([]);
+
+  // États pour la 2FA
+  const [passwordFor2FA, setPasswordFor2FA] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+
+  // Charger les enfants si l'utilisateur est un parent
+  useEffect(() => {
+    if (user.role === 'parent') {
+      fetchMyChildren();
+    }
+    if (user.role === 'administrateur') {
+      fetchEleves();
+    }
+  }, []);
+
+  const fetchMyChildren = async () => {
+    try {
+      const response = await axios.get('/auth/my-children');
+      setMyChildren(response.data.enfants);
+    } catch (error) {
+      console.error('Erreur lors du chargement des enfants:', error);
+    }
+  };
+
+  const fetchEleves = async () => {
+    try {
+      const response = await axios.get('/eleves');
+      setEleves(response.data.eleves);
+    } catch (error) {
+      console.error('Erreur lors du chargement des élèves:', error);
+    }
+  };
+
+  const handleCSVUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      // Simuler la prévisualisation (dans un vrai projet, on analyserait le CSV)
+      setImportPreview([
+        { email: 'enseignant1@exemple.com', nom: 'Doe', prenoms: 'John', role: 'enseignant' },
+        { email: 'parent1@exemple.com', nom: 'Smith', prenoms: 'Jane', role: 'parent' }
+      ]);
+    } else {
+      toast.error('Veuillez sélectionner un fichier CSV valide');
+    }
+  };
+
+  const handleImportUsers = async () => {
+    if (!csvFile || importPreview.length === 0) {
+      toast.error('Aucun fichier CSV valide sélectionné');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Simuler l'import pour la démo - dans un vrai projet on enverrait le fichier
+      const usersData = importPreview.map(user => ({
+        ...user,
+        mot_de_passe_temporaire: Math.random().toString(36).slice(-8)
+      }));
+
+      const response = await axios.post('/auth/import-users', usersData);
+      setImportResults(response.data);
+      toast.success(`Import terminé: ${response.data.details.success} utilisateurs créés`);
+      setCsvFile(null);
+      setImportPreview([]);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'import');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLinkParentChild = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await axios.post('/auth/link-parent-child', linkFormData);
+      toast.success('Liaison parent-enfant créée avec succès!');
+      setShowParentChildLink(false);
+      if (user.role === 'parent') {
+        fetchMyChildren();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la liaison');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnable2FA = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post('/auth/enable-2fa', {
+        mot_de_passe: passwordFor2FA
+      });
+      
+      setQrCodeUrl(response.data.qr_url);
+      setTwoFASecret(response.data.secret_2fa);
+      toast.success('Secret 2FA généré! Scannez le QR code.');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'activation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm2FA = async () => {
+    setLoading(true);
+    try {
+      await axios.post('/auth/confirm-2fa', {
+        code_secret: twoFASecret,
+        code_verification: verificationCode
+      });
+      
+      setTwoFAEnabled(true);
+      toast.success('2FA activée avec succès!');
+      setShow2FAManagement(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Code incorrect');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    setLoading(true);
+    try {
+      await axios.post('/auth/disable-2fa', {
+        code_2fa: verificationCode
+      });
+      
+      setTwoFAEnabled(false);
+      toast.success('2FA désactivée avec succès!');
+      setShow2FAManagement(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Code incorrect');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Import/Export et Gestion des utilisateurs */}
+      {user.role === 'administrateur' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Upload className="h-5 w-5 mr-2 text-green-600" />
+              Gestion des Utilisateurs
+            </CardTitle>
+            <CardDescription>
+              Import en masse et gestion des comptes utilisateurs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Dialog open={showImportUsers} onOpenChange={setShowImportUsers}>
+                <DialogTrigger asChild>
+                  <Button className="h-16 flex flex-col items-center justify-center bg-green-600 hover:bg-green-700">
+                    <Upload className="h-6 w-6 mb-1" />
+                    <span>Import Utilisateurs (CSV)</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Import d'utilisateurs depuis CSV</DialogTitle>
+                    <DialogDescription>
+                      Importez plusieurs utilisateurs en une seule fois
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="csv_file">Fichier CSV</Label>
+                      <Input
+                        id="csv_file"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCSVUpload}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Format: email,nom,prenoms,role,telephone
+                      </p>
+                    </div>
+
+                    {importPreview.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Aperçu ({importPreview.length} utilisateurs)</h4>
+                        <div className="max-h-40 overflow-y-auto border rounded p-2">
+                          {importPreview.map((user, index) => (
+                            <div key={index} className="text-sm p-2 border-b">
+                              {user.email} - {user.nom} {user.prenoms} ({user.role})
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <Button 
+                          onClick={handleImportUsers}
+                          disabled={loading}
+                          className="w-full bg-green-600 hover:bg-green-700"
+                        >
+                          {loading ? 'Import en cours...' : 'Confirmer l\'import'}
+                        </Button>
+                      </div>
+                    )}
+
+                    {importResults && (
+                      <div className="bg-green-50 border border-green-200 rounded p-4">
+                        <h4 className="font-medium text-green-800">Résultats de l'import</h4>
+                        <p className="text-sm text-green-700">
+                          Succès: {importResults.details.success} / {importResults.details.total}
+                        </p>
+                        {importResults.details.errors.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-sm text-red-700">Erreurs:</p>
+                            {importResults.details.errors.slice(0, 3).map((err, i) => (
+                              <p key={i} className="text-xs text-red-600">
+                                Ligne {err.ligne}: {err.erreur}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showParentChildLink} onOpenChange={setShowParentChildLink}>
+                <DialogTrigger asChild>
+                  <Button className="h-16 flex flex-col items-center justify-center bg-blue-600 hover:bg-blue-700">
+                    <Link className="h-6 w-6 mb-1" />
+                    <span>Lier Parent-Enfant</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Liaison Parent-Enfant</DialogTitle>
+                    <DialogDescription>
+                      Créer un lien entre un parent et un élève
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <form onSubmit={handleLinkParentChild} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="parent_email">Email du parent</Label>
+                      <Input
+                        id="parent_email"
+                        type="email"
+                        value={linkFormData.parent_email}
+                        onChange={(e) => setLinkFormData({...linkFormData, parent_email: e.target.value})}
+                        placeholder="parent@exemple.com"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Élève</Label>
+                      <Select 
+                        value={linkFormData.eleve_id} 
+                        onValueChange={(value) => setLinkFormData({...linkFormData, eleve_id: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un élève" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eleves.map(eleve => (
+                            <SelectItem key={eleve._id} value={eleve._id}>
+                              {eleve.nom} {eleve.prenoms} ({eleve.classe})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Relation</Label>
+                      <Select 
+                        value={linkFormData.relation} 
+                        onValueChange={(value) => setLinkFormData({...linkFormData, relation: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="parent">Parent</SelectItem>
+                          <SelectItem value="tuteur">Tuteur</SelectItem>
+                          <SelectItem value="responsable">Responsable</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button type="submit" disabled={loading} className="w-full">
+                      {loading ? 'Création...' : 'Créer la liaison'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Section 2FA pour tous les utilisateurs */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Shield className="h-5 w-5 mr-2 text-blue-600" />
-            Fonctionnalités Avancées
+            <Shield className="h-5 w-5 mr-2 text-purple-600" />
+            Authentification à Deux Facteurs (2FA)
           </CardTitle>
           <CardDescription>
-            Outils d'administration avancés et nouvelles fonctionnalités
+            Renforcez la sécurité de votre compte avec la 2FA
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Upload className="h-6 w-6 mb-2" />
-              <span>Import de Données</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Download className="h-6 w-6 mb-2" />
-              <span>Export de Données</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Link className="h-6 w-6 mb-2" />
-              <span>Intégrations</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Shield className="h-6 w-6 mb-2" />
-              <span>Sécurité Avancée</span>
-            </Button>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">
+                2FA: {twoFAEnabled ? 'Activée' : 'Désactivée'}
+              </p>
+              <p className="text-sm text-gray-600">
+                {twoFAEnabled 
+                  ? 'Votre compte est protégé par la 2FA' 
+                  : 'Activez la 2FA pour plus de sécurité'
+                }
+              </p>
+            </div>
+            
+            <Dialog open={show2FAManagement} onOpenChange={setShow2FAManagement}>
+              <DialogTrigger asChild>
+                <Button variant={twoFAEnabled ? "destructive" : "default"}>
+                  {twoFAEnabled ? 'Désactiver 2FA' : 'Activer 2FA'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {twoFAEnabled ? 'Désactiver la 2FA' : 'Activer la 2FA'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {twoFAEnabled 
+                      ? 'Entrez un code 2FA pour désactiver'
+                      : 'Configurez l\'authentification à deux facteurs'
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  {!twoFAEnabled ? (
+                    <>
+                      {!qrCodeUrl ? (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="password_2fa">Mot de passe actuel</Label>
+                            <Input
+                              id="password_2fa"
+                              type="password"
+                              value={passwordFor2FA}
+                              onChange={(e) => setPasswordFor2FA(e.target.value)}
+                              placeholder="Votre mot de passe"
+                            />
+                          </div>
+                          <Button onClick={handleEnable2FA} disabled={loading}>
+                            {loading ? 'Génération...' : 'Générer le code 2FA'}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="text-center">
+                            <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`}
+                              alt="QR Code 2FA"
+                              className="mx-auto border rounded"
+                            />
+                            <p className="text-sm text-gray-600 mt-2">
+                              Scannez avec Google Authenticator ou une app similaire
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="verification_code">Code de vérification</Label>
+                            <Input
+                              id="verification_code"
+                              value={verificationCode}
+                              onChange={(e) => setVerificationCode(e.target.value)}
+                              placeholder="123456"
+                              maxLength="6"
+                            />
+                          </div>
+                          
+                          <Button onClick={handleConfirm2FA} disabled={loading}>
+                            {loading ? 'Vérification...' : 'Confirmer l\'activation'}
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="disable_code">Code 2FA</Label>
+                        <Input
+                          id="disable_code"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          placeholder="123456"
+                          maxLength="6"
+                        />
+                      </div>
+                      <Button onClick={handleDisable2FA} disabled={loading} variant="destructive">
+                        {loading ? 'Désactivation...' : 'Désactiver la 2FA'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>
+
+      {/* Mes enfants (pour les parents) */}
+      {user.role === 'parent' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="h-5 w-5 mr-2 text-blue-600" />
+              Mes Enfants ({myChildren.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {myChildren.length > 0 ? (
+              <div className="space-y-3">
+                {myChildren.map((child) => (
+                  <div key={child._id} className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <p className="font-medium">
+                        {child.eleve.nom} {child.eleve.prenoms}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {child.eleve.classe} - Matricule: {child.eleve.matricule}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{child.relation}</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">Aucun enfant lié à votre compte</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Contactez l'administration pour lier votre enfant
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
