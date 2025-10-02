@@ -308,6 +308,53 @@ class ReponseMessageCreate(BaseModel):
     message_parent_id: str
     contenu: str = Field(min_length=1, max_length=5000)
 
+# Nouveaux modèles pour les fonctionnalités avancées d'authentification
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    nouveau_mot_de_passe: str = Field(min_length=6)
+    confirmer_mot_de_passe: str = Field(min_length=6)
+    
+    @validator('confirmer_mot_de_passe')
+    def validate_password_confirmation(cls, v, values):
+        if 'nouveau_mot_de_passe' in values and v != values['nouveau_mot_de_passe']:
+            raise ValueError('Les mots de passe ne correspondent pas')
+        return v
+
+class ParentChildLink(BaseModel):
+    parent_email: str
+    eleve_id: str
+    relation: str = Field(default="parent", pattern="^(parent|tuteur|responsable)$")
+
+class UserImportItem(BaseModel):
+    email: EmailStr
+    nom: str = Field(min_length=2, max_length=100)
+    prenoms: str = Field(min_length=2, max_length=200)
+    role: str = Field(pattern="^(parent|enseignant|eleve)$")
+    telephone: Optional[str] = None
+    mot_de_passe_temporaire: str = Field(min_length=6)
+    
+    @validator('telephone')
+    def validate_phone(cls, v):
+        if v:
+            clean_phone = re.sub(r"[\s\-\.]", "", v)
+            if not re.match(r"^(\+224|224)?[6-7][0-9]{8}$", clean_phone):
+                raise ValueError('Format de numéro guinéen invalide')
+        return v
+
+class Enable2FARequest(BaseModel):
+    mot_de_passe: str
+
+class Confirm2FARequest(BaseModel):
+    code_secret: str
+    code_verification: str
+
+class Verify2FARequest(BaseModel):
+    code_2fa: str
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
