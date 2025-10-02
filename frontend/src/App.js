@@ -679,6 +679,226 @@ const Sidebar = ({ activeTab, setActiveTab, user, onLogout }) => {
   );
 };
 
+// Composant Dashboard amélioré pour production
+const Dashboard = ({ user }) => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await axios.get('/dashboard/stats');
+      setStats(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des statistiques:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRoleSpecificContent = () => {
+    if (!user) return null;
+
+    switch(user.role) {
+      case 'administrateur':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Users className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Élèves</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats?.eleves?.total || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <FileText className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Factures Émises</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats?.finances?.total_factures || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <AlertCircle className="h-8 w-8 text-orange-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Factures Impayées</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats?.finances?.factures_impayees || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <DollarSign className="h-8 w-8 text-red-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Créances (GNF)</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats?.finances?.total_creances?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case 'enseignant':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <BookOpen className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Mes Classes</p>
+                    <p className="text-2xl font-bold text-gray-900">3</p>
+                    <p className="text-xs text-gray-500">6ème, 5ème, 4ème</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Users className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Mes Élèves</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats?.eleves?.total || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <ClipboardCheck className="h-8 w-8 text-orange-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Absences cette semaine</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats?.presences?.absences_cette_semaine || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case 'parent':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Users className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Mes Enfants</p>
+                    <p className="text-2xl font-bold text-gray-900">2</p>
+                    <p className="text-xs text-gray-500">Consultez leurs bulletins</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <CreditCard className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Factures en cours</p>
+                    <p className="text-2xl font-bold text-gray-900">1</p>
+                    <p className="text-xs text-gray-500">À régler</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case 'eleve':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <BookOpen className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Ma Classe</p>
+                    <p className="text-2xl font-bold text-gray-900">{user.classe || '3ème'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <FileText className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Devoirs en cours</p>
+                    <p className="text-2xl font-bold text-gray-900">3</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <School className="h-8 w-8 text-orange-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Moyenne Générale</p>
+                    <p className="text-2xl font-bold text-gray-900">14.5</p>
+                    <p className="text-xs text-gray-500">/20</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <School className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600">Chargement du tableau de bord...</p>
+        </div>
+      </div>
+    );
+  }
+
 // Composant Dashboard
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
