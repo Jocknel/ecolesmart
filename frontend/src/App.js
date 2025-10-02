@@ -276,15 +276,15 @@ const AuthComponent = ({ onAuthSuccess }) => {
         
         // Messages de succès personnalisés selon le rôle
         const roleMessages = {
-          'administrateur': 'Connexion administrateur réussie! Bienvenue dans l\'interface d\'administration.',
-          'enseignant': 'Connexion enseignant réussie! Accédez à vos classes et élèves.',
-          'parent': 'Connexion parent réussie! Suivez le parcours scolaire de vos enfants.',
-          'eleve': 'Connexion élève réussie! Consultez vos notes et devoirs.'
+          'administrateur': 'Connexion réussie! Bienvenue dans votre espace d\'administration.',
+          'enseignant': 'Connexion réussie! Accédez à vos classes et élèves.',
+          'parent': 'Connexion réussie! Suivez le parcours scolaire de vos enfants.',
+          'eleve': 'Connexion réussie! Consultez vos notes et devoirs.'
         };
         
         const welcomeMessage = isLogin 
           ? roleMessages[response.data.user.role] || 'Connexion réussie!'
-          : `Inscription réussie! Bienvenue ${response.data.user.nom} ${response.data.user.prenoms}`;
+          : `Compte créé avec succès! Bienvenue ${response.data.user.nom} ${response.data.user.prenoms}.`;
         
         // Vérifier si changement de mot de passe requis
         if (response.data.requires_password_change) {
