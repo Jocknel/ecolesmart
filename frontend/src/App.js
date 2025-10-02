@@ -203,12 +203,26 @@ const AuthComponent = ({ onAuthSuccess }) => {
       }
 
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
-      const response = await axios.post(endpoint, formData);
+      const loginData = { ...formData };
+      
+      // Ajouter le code 2FA si nécessaire
+      if (isLogin && needs2FA && code2FA) {
+        loginData.code_2fa = code2FA;
+      }
+      
+      const response = await axios.post(endpoint, loginData);
       
       if (response.data.access_token) {
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+        
+        // Vérifier si changement de mot de passe requis
+        if (response.data.requires_password_change) {
+          toast.warning(response.data.message || 'Vous devez changer votre mot de passe temporaire');
+          // On peut implémenter un modal ici ou rediriger
+        }
+        
         onAuthSuccess(response.data.user);
         toast.success(isLogin ? 'Connexion réussie!' : 'Inscription réussie!');
       }
