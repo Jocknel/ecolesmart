@@ -4813,6 +4813,14 @@ const App = () => {
         </main>
       </div>
       
+      {/* Guide de bienvenue pour nouveaux utilisateurs */}
+      {showWelcomeGuide && (
+        <WelcomeGuide 
+          user={user} 
+          onClose={() => setShowWelcomeGuide(false)} 
+        />
+      )}
+      
       <Toaster position="top-right" />
     </div>
   );
