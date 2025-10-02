@@ -356,6 +356,16 @@ class Confirm2FARequest(BaseModel):
 class Verify2FARequest(BaseModel):
     code_2fa: str
 
+class ChangeTemporaryPasswordRequest(BaseModel):
+    nouveau_mot_de_passe: str = Field(min_length=6)
+    confirmer_mot_de_passe: str = Field(min_length=6)
+    
+    @validator('confirmer_mot_de_passe')
+    def validate_password_confirmation(cls, v, values):
+        if 'nouveau_mot_de_passe' in values and v != values['nouveau_mot_de_passe']:
+            raise ValueError('Les mots de passe ne correspondent pas')
+        return v
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
