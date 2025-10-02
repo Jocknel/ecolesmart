@@ -427,6 +427,86 @@ def detect_operator(phone: str) -> str:
     else:
         return "INCONNU"
 
+# Nouvelles fonctions utilitaires pour les fonctionnalités avancées
+
+async def send_email(to_email: str, subject: str, content: str):
+    """Envoie un email via SendGrid"""
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+        
+        sender_email = os.environ.get('SENDER_EMAIL', 'noreply@ecole-smart.gn')
+        api_key = os.environ.get('SENDGRID_API_KEY')
+        
+        if not api_key:
+            logger.warning("SendGrid API key not configured - email not sent")
+            return False
+            
+        message = Mail(
+            from_email=sender_email,
+            to_emails=to_email,
+            subject=subject,
+            html_content=content
+        )
+        
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        
+        logger.info(f"Email envoyé à {to_email}: {subject}")
+        return response.status_code == 202
+        
+    except Exception as e:
+        logger.error(f"Erreur envoi email: {str(e)}")
+        return False
+
+def generate_reset_token(email: str) -> str:
+    """Génère un token de réinitialisation de mot de passe"""
+    data = {
+        "sub": email,
+        "exp": datetime.utcnow() + timedelta(hours=1),  # Expire dans 1 heure
+        "type": "password_reset"
+    }
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_reset_token(token: str) -> Optional[str]:
+    """Vérifie un token de réinitialisation et retourne l'email"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "password_reset":
+            return None
+        return payload.get("sub")
+    except jwt.PyJWTError:
+        return None
+
+def generate_2fa_secret() -> str:
+    """Génère un secret pour 2FA"""
+    import secrets
+    import base64
+    return base64.b32encode(secrets.token_bytes(20)).decode('utf-8')
+
+def generate_2fa_qr_url(email: str, secret: str) -> str:
+    """Génère l'URL pour le QR code 2FA"""
+    import urllib.parse
+    app_name = "École Smart"
+    return f"otpauth://totp/{urllib.parse.quote(app_name)}:{urllib.parse.quote(email)}?secret={secret}&issuer={urllib.parse.quote(app_name)}"
+
+def verify_2fa_code(secret: str, code: str) -> bool:
+    """Vérifie un code 2FA"""
+    try:
+        import pyotp
+        totp = pyotp.TOTP(secret)
+        return totp.verify(code, valid_window=1)  # Accepte le code actuel et le précédent
+    except Exception as e:
+        logger.error(f"Erreur vérification 2FA: {str(e)}")
+        return False
+
+async def generate_temporary_password() -> str:
+    """Génère un mot de passe temporaire"""
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits + "!@#$%"
+    return ''.join(secrets.choice(alphabet) for i in range(12))
+
 # Routes d'authentification
 @api_router.post("/auth/register", response_model=Token)
 async def register_user(user_data: UserCreate):
