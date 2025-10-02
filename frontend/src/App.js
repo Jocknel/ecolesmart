@@ -527,10 +527,15 @@ const AuthComponent = ({ onAuthSuccess }) => {
                 name="mot_de_passe"
                 type="password"
                 value={formData.mot_de_passe}
-                onChange={handleInputChange}
+                onChange={(e) => handleInputChange('mot_de_passe', e.target.value)}
+                placeholder="Minimum 6 caractères"
                 required
                 data-testid="password-input"
+                className={fieldErrors.mot_de_passe ? 'border-red-500' : ''}
               />
+              {fieldErrors.mot_de_passe && (
+                <p className="text-sm text-red-500">{fieldErrors.mot_de_passe}</p>
+              )}
             </div>
 
             {needs2FA && isLogin && (
