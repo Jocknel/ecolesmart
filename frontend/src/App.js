@@ -478,10 +478,6 @@ const AuthComponent = ({ onAuthSuccess }) => {
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   const handleGoogleAuth = () => {
     const redirectUrl = encodeURIComponent(window.location.origin);
     window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
