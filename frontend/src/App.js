@@ -3798,6 +3798,45 @@ const DevoirsRessourcesComponent = ({ user }) => {
   );
 };
 
+// Composant Administration Avancée (nouvelles fonctionnalités)
+const AdvancedAdministrationComponent = ({ user }) => {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Shield className="h-5 w-5 mr-2 text-blue-600" />
+            Fonctionnalités Avancées
+          </CardTitle>
+          <CardDescription>
+            Outils d'administration avancés et nouvelles fonctionnalités
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Upload className="h-6 w-6 mb-2" />
+              <span>Import de Données</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Download className="h-6 w-6 mb-2" />
+              <span>Export de Données</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Link className="h-6 w-6 mb-2" />
+              <span>Intégrations</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Shield className="h-6 w-6 mb-2" />
+              <span>Sécurité Avancée</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Composant Administration (réservé aux administrateurs)
 const AdministrationComponent = ({ user }) => {
   const [codeGenere, setCodeGenere] = useState(null);
