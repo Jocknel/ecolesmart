@@ -509,10 +509,15 @@ const AuthComponent = ({ onAuthSuccess }) => {
                 name="email"
                 type="email"
                 value={formData.email}
-                onChange={handleInputChange}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder="votre.email@exemple.com"
                 required
                 data-testid="email-input"
+                className={fieldErrors.email ? 'border-red-500' : ''}
               />
+              {fieldErrors.email && (
+                <p className="text-sm text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
