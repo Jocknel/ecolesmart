@@ -19,6 +19,146 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 // Configuration axios
 axios.defaults.baseURL = API_BASE_URL;
 
+// Composant de récupération de mot de passe
+const PasswordResetComponent = ({ onBack }) => {
+  const [step, setStep] = useState('request'); // 'request' ou 'confirm'
+  const [email, setEmail] = useState('');
+  const [resetData, setResetData] = useState({
+    token: '',
+    nouveau_mot_de_passe: '',
+    confirmer_mot_de_passe: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  // Vérifier s'il y a un token dans l'URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      setStep('confirm');
+      setResetData(prev => ({ ...prev, token }));
+    }
+  }, []);
+
+  const handleRequestReset = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await axios.post('/auth/password-reset-request', { email });
+      toast.success('Un lien de réinitialisation a été envoyé à votre email');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la demande');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmReset = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await axios.post('/auth/password-reset-confirm', resetData);
+      toast.success('Mot de passe réinitialisé avec succès!');
+      onBack();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la réinitialisation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center mb-4">
+            <Key className="h-8 w-8 text-blue-600 mr-2" />
+            <h1 className="text-2xl font-bold text-blue-800">École Smart</h1>
+          </div>
+          <CardTitle>
+            {step === 'request' ? 'Récupération de mot de passe' : 'Nouveau mot de passe'}
+          </CardTitle>
+          <CardDescription>
+            {step === 'request' 
+              ? 'Entrez votre email pour recevoir un lien de récupération'
+              : 'Créez un nouveau mot de passe sécurisé'
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {step === 'request' ? (
+            <form onSubmit={handleRequestReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="votre.email@exemple.com"
+                  required
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700" 
+                disabled={loading}
+              >
+                {loading ? 'Envoi...' : 'Envoyer le lien'}
+              </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Retour à la connexion
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleConfirmReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nouveau_mot_de_passe">Nouveau mot de passe</Label>
+                <Input
+                  id="nouveau_mot_de_passe"
+                  type="password"
+                  value={resetData.nouveau_mot_de_passe}
+                  onChange={(e) => setResetData({...resetData, nouveau_mot_de_passe: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmer_mot_de_passe">Confirmer le mot de passe</Label>
+                <Input
+                  id="confirmer_mot_de_passe"
+                  type="password"
+                  value={resetData.confirmer_mot_de_passe}
+                  onChange={(e) => setResetData({...resetData, confirmer_mot_de_passe: e.target.value})}
+                  required
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-green-600 hover:bg-green-700" 
+                disabled={loading}
+              >
+                {loading ? 'Réinitialisation...' : 'Réinitialiser'}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Composant d'authentification
 const AuthComponent = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
