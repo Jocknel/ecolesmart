@@ -595,6 +595,19 @@ const AuthComponent = ({ onAuthSuccess }) => {
                   Mot de passe oublié ?
                 </button>
               )}
+              
+              {/* Guide pour les comptes de test */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs font-medium text-blue-800 mb-2">🚀 Comptes de Démonstration</p>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p><strong>Admin:</strong> admin@ecole-smart.gn / Admin2024!</p>
+                  <p><strong>Enseignant:</strong> prof.mathematiques@ecole-smart.gn / Prof2024!</p>
+                  <p><strong>Parent:</strong> parent.camara@gmail.com / Parent2024!</p>
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  Ou créez votre propre compte pour tester l'application
+                </p>
+              </div>
             </div>
           </form>
         </CardContent>
