@@ -338,35 +338,57 @@ const AuthComponent = ({ onAuthSuccess }) => {
       } else if (status === 400) {
         if (typeof errorDetail === 'string') {
           if (errorDetail.includes('utilisateur avec cet email existe déjà')) {
-            toast.error('❌ Un compte existe déjà avec cet email. Essayez de vous connecter ou utilisez "Mot de passe oublié".', {
+            toast.error('Cet email est déjà utilisé. Connectez-vous ou utilisez "Mot de passe oublié" si nécessaire.', {
               duration: 6000
             });
           } else if (errorDetail.includes('Code administrateur')) {
-            toast.error('❌ Code administrateur invalide. Contactez un administrateur pour obtenir un code valide.', {
+            toast.error('Code administrateur requis ou invalide. Contactez votre établissement pour obtenir ce code.', {
               duration: 6000
             });
+          } else if (errorDetail.includes('mot de passe')) {
+            toast.error('Le mot de passe ne respecte pas les critères requis. Minimum 6 caractères.', {
+              duration: 5000
+            });
+          } else if (errorDetail.includes('email')) {
+            toast.error('Format d\'email invalide. Veuillez saisir une adresse email valide.', {
+              duration: 5000
+            });
+          } else if (errorDetail.includes('telephone') || errorDetail.includes('téléphone')) {
+            toast.error('Numéro de téléphone invalide. Format attendu: +224 XXX XXX XXX', {
+              duration: 5000
+            });
           } else {
-            toast.error(`❌ ${errorDetail}`, { duration: 5000 });
+            toast.error(`Erreur: ${errorDetail}`, { duration: 5000 });
           }
         } else if (Array.isArray(errorDetail)) {
           // Gestion des erreurs de validation Pydantic
           const firstError = errorDetail[0];
           const field = firstError?.loc?.[1] || 'champ';
-          const message = firstError?.msg || 'Erreur de validation';
+          let message = firstError?.msg || 'Erreur de validation';
+          
+          // Messages plus clairs selon le type d'erreur
+          if (message.includes('value is not a valid email')) {
+            message = 'Format d\'email invalide';
+          } else if (message.includes('ensure this value has at least')) {
+            message = 'Trop court - minimum requis non respecté';
+          } else if (message.includes('ensure this value has at most')) {
+            message = 'Trop long - maximum autorisé dépassé';
+          }
           
           const fieldNames = {
             'email': 'Email',
             'mot_de_passe': 'Mot de passe', 
             'nom': 'Nom',
             'prenoms': 'Prénoms',
-            'telephone': 'Téléphone'
+            'telephone': 'Téléphone',
+            'confirmer_mot_de_passe': 'Confirmation mot de passe'
           };
           
-          toast.error(`❌ ${fieldNames[field] || field}: ${message}`, {
+          toast.error(`${fieldNames[field] || 'Champ'}: ${message}`, {
             duration: 5000
           });
         } else {
-          toast.error('❌ Données invalides. Vérifiez les informations saisies.', {
+          toast.error('Données invalides. Vérifiez tous les champs et réessayez.', {
             duration: 5000
           });
         }
