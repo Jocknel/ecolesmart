@@ -227,7 +227,7 @@ const AuthComponent = ({ onAuthSuccess }) => {
           const phoneRegex = /^(\+224|224)?[6-7][0-9]{8}$/;
           const cleanPhone = formData.telephone.replace(/[\s\-\.]/g, '');
           if (!phoneRegex.test(cleanPhone)) {
-            toast.error('Format de numéro guinéen invalide (ex: +224 664 123 456)');
+            toast.error('Numéro de téléphone invalide. Format correct: +224 6XX XXX XXX');
             setLoading(false);
             return;
           }
