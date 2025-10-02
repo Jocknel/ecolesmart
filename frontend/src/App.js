@@ -3977,6 +3977,9 @@ const AdministrationComponent = ({ user }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Nouvelles fonctionnalités d'administration */}
+      <AdvancedAdministrationComponent user={user} />
     </div>
   );
 };
