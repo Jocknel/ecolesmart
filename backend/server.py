@@ -1137,16 +1137,10 @@ async def import_users_from_csv(
 
 @api_router.post("/auth/change-temporary-password")
 async def change_temporary_password(
-    nouveau_mot_de_passe: str = Field(min_length=6),
-    confirmer_mot_de_passe: str = Field(min_length=6),
+    password_data: ChangeTemporaryPasswordRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """Changer un mot de passe temporaire"""
-    if nouveau_mot_de_passe != confirmer_mot_de_passe:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Les mots de passe ne correspondent pas"
-        )
     
     user = await db.users.find_one({"_id": current_user["_id"]})
     if not user.get("mot_de_passe_temporaire", False):
