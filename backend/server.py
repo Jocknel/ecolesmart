@@ -1150,7 +1150,7 @@ async def change_temporary_password(
         )
     
     # Mettre à jour le mot de passe
-    hashed_password = get_password_hash(nouveau_mot_de_passe)
+    hashed_password = get_password_hash(password_data.nouveau_mot_de_passe)
     
     await db.users.update_one(
         {"_id": current_user["_id"]},
