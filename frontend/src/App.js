@@ -435,14 +435,24 @@ const AuthComponent = ({ onAuthSuccess }) => {
               {isLogin ? 'Se connecter avec Google' : 'S\'inscrire avec Google'}
             </Button>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 hover:underline block mx-auto"
               >
                 {isLogin ? 'Créer un compte' : 'Déjà un compte ? Se connecter'}
               </button>
+              
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordReset(true)}
+                  className="text-sm text-gray-600 hover:underline block mx-auto"
+                >
+                  Mot de passe oublié ?
+                </button>
+              )}
             </div>
           </form>
         </CardContent>
