@@ -4588,11 +4588,109 @@ const AdministrationComponent = ({ user }) => {
   );
 };
 
+// Composant de bienvenue pour nouveaux utilisateurs
+const WelcomeGuide = ({ user, onClose }) => {
+  const getWelcomeContent = () => {
+    switch(user.role) {
+      case 'administrateur':
+        return {
+          title: '👨‍💼 Bienvenue, Administrateur !',
+          steps: [
+            'Gérez les utilisateurs depuis la section Administration',
+            'Créez des matières et configurez les classes',
+            'Supervisez les factures et paiements',
+            'Générez des rapports et statistiques'
+          ]
+        };
+      case 'enseignant':
+        return {
+          title: '👨‍🏫 Bienvenue, Enseignant !',
+          steps: [
+            'Consultez vos élèves dans la section Élèves',
+            'Saisissez les notes dans Notes & Moyennes',
+            'Créez des devoirs et ressources pédagogiques',
+            'Gérez les présences de vos élèves'
+          ]
+        };
+      case 'parent':
+        return {
+          title: '👨‍👩‍👧‍👦 Bienvenue, Parent !',
+          steps: [
+            'Consultez les bulletins de vos enfants',
+            'Suivez les devoirs et ressources',
+            'Vérifiez les factures et paiements',
+            'Contactez les enseignants via la messagerie'
+          ]
+        };
+      case 'eleve':
+        return {
+          title: '👨‍🎓 Bienvenue, Élève !',
+          steps: [
+            'Consultez vos notes et moyennes',
+            'Téléchargez vos bulletins',
+            'Accédez à vos devoirs et ressources',
+            'Vérifiez votre emploi du temps'
+          ]
+        };
+      default:
+        return {
+          title: '🎉 Bienvenue dans École Smart !',
+          steps: ['Explorez les différentes fonctionnalités de la plateforme']
+        };
+    }
+  };
+
+  const content = getWelcomeContent();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <Card className="w-full max-w-md mx-4">
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">{content.title}</CardTitle>
+          <CardDescription>
+            Découvrez comment utiliser École Smart
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <p className="font-medium text-sm">Prochaines étapes :</p>
+            <ul className="space-y-2">
+              {content.steps.map((step, index) => (
+                <li key={index} className="flex items-start text-sm">
+                  <span className="bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium mr-3 mt-0.5 flex-shrink-0">
+                    {index + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-xs text-green-700 text-center">
+              ✅ Votre compte a été créé avec succès !<br/>
+              Vous êtes maintenant connecté(e) à École Smart.
+            </p>
+          </div>
+          
+          <Button 
+            onClick={onClose}
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            Commencer à utiliser École Smart
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Composant principal de l'application
 const App = () => {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
 
   useEffect(() => {
     const processGoogleAuth = async () => {
