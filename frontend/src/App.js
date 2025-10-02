@@ -300,6 +300,24 @@ const AuthComponent = ({ onAuthSuccess }) => {
               />
             </div>
 
+            {needs2FA && isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="code_2fa">Code 2FA</Label>
+                <Input
+                  id="code_2fa"
+                  type="text"
+                  value={code2FA}
+                  onChange={(e) => setCode2FA(e.target.value)}
+                  placeholder="Entrez le code à 6 chiffres"
+                  required
+                  maxLength="6"
+                />
+                <p className="text-xs text-gray-500">
+                  Entrez le code généré par votre application d'authentification
+                </p>
+              </div>
+            )}
+
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="confirmer_mot_de_passe">Confirmer le mot de passe</Label>
