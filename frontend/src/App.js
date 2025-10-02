@@ -176,11 +176,75 @@ const AuthComponent = ({ onAuthSuccess }) => {
     code_admin: ''
   });
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Si on doit afficher la récupération de mot de passe
   if (showPasswordReset) {
     return <PasswordResetComponent onBack={() => setShowPasswordReset(false)} />;
   }
+
+  // Validation en temps réel des champs
+  const validateField = (name, value) => {
+    const errors = { ...fieldErrors };
+    
+    switch (name) {
+      case 'email':
+        if (value && !value.includes('@')) {
+          errors.email = 'Format d\'email invalide';
+        } else {
+          delete errors.email;
+        }
+        break;
+      case 'mot_de_passe':
+        if (value && value.length < 6) {
+          errors.mot_de_passe = 'Minimum 6 caractères requis';
+        } else {
+          delete errors.mot_de_passe;
+        }
+        break;
+      case 'confirmer_mot_de_passe':
+        if (value && value !== formData.mot_de_passe) {
+          errors.confirmer_mot_de_passe = 'Les mots de passe ne correspondent pas';
+        } else {
+          delete errors.confirmer_mot_de_passe;
+        }
+        break;
+      case 'nom':
+        if (value && value.length < 2) {
+          errors.nom = 'Minimum 2 caractères requis';
+        } else {
+          delete errors.nom;
+        }
+        break;
+      case 'prenoms':
+        if (value && value.length < 2) {
+          errors.prenoms = 'Minimum 2 caractères requis';
+        } else {
+          delete errors.prenoms;
+        }
+        break;
+      case 'telephone':
+        if (value && value.length > 0) {
+          const phoneRegex = /^(\+224|224)?[6-7][0-9]{8}$/;
+          const cleanPhone = value.replace(/[\s\-\.]/g, '');
+          if (!phoneRegex.test(cleanPhone)) {
+            errors.telephone = 'Format: +224 6XX XXX XXX';
+          } else {
+            delete errors.telephone;
+          }
+        } else {
+          delete errors.telephone;
+        }
+        break;
+    }
+    
+    setFieldErrors(errors);
+  };
+
+  const handleInputChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    validateField(name, value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
