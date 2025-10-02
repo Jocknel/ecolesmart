@@ -564,10 +564,15 @@ const AuthComponent = ({ onAuthSuccess }) => {
                   name="confirmer_mot_de_passe"
                   type="password"
                   value={formData.confirmer_mot_de_passe}
-                  onChange={handleInputChange}
+                  onChange={(e) => handleInputChange('confirmer_mot_de_passe', e.target.value)}
+                  placeholder="Confirmez votre mot de passe"
                   required
                   data-testid="confirm-password-input"
+                  className={fieldErrors.confirmer_mot_de_passe ? 'border-red-500' : ''}
                 />
+                {fieldErrors.confirmer_mot_de_passe && (
+                  <p className="text-sm text-red-500">{fieldErrors.confirmer_mot_de_passe}</p>
+                )}
               </div>
             )}
 
