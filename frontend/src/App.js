@@ -162,6 +162,9 @@ const PasswordResetComponent = ({ onBack }) => {
 // Composant d'authentification
 const AuthComponent = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [code2FA, setCode2FA] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     mot_de_passe: '',
@@ -173,6 +176,11 @@ const AuthComponent = ({ onAuthSuccess }) => {
     code_admin: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Si on doit afficher la récupération de mot de passe
+  if (showPasswordReset) {
+    return <PasswordResetComponent onBack={() => setShowPasswordReset(false)} />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
