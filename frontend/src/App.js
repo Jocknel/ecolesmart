@@ -227,6 +227,14 @@ const AuthComponent = ({ onAuthSuccess }) => {
         toast.success(isLogin ? 'Connexion réussie!' : 'Inscription réussie!');
       }
     } catch (error) {
+      // Gestion spéciale pour la 2FA
+      if (error.response?.status === 202) {
+        setNeeds2FA(true);
+        toast.info('Code 2FA requis');
+        setLoading(false);
+        return;
+      }
+      
       const errorMessage = error.response?.data?.detail;
       if (typeof errorMessage === 'string') {
         toast.error(errorMessage);
