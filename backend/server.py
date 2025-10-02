@@ -725,6 +725,382 @@ async def logout_user(current_user: dict = Depends(get_current_user)):
             detail="Erreur lors de la déconnexion"
         )
 
+# Nouvelles routes d'authentification avancées
+
+@api_router.post("/auth/password-reset-request")
+async def request_password_reset(reset_request: PasswordResetRequest):
+    """Demander une réinitialisation de mot de passe"""
+    user = await db.users.find_one({"email": reset_request.email})
+    
+    if not user:
+        # Pour des raisons de sécurité, on ne révèle pas si l'email existe
+        return {"message": "Si l'email existe, un lien de réinitialisation a été envoyé"}
+    
+    # Générer le token de réinitialisation
+    reset_token = generate_reset_token(reset_request.email)
+    
+    # Stocker le token en base (optionnel, pour pouvoir l'invalider)
+    await db.password_reset_tokens.insert_one({
+        "_id": str(uuid.uuid4()),
+        "email": reset_request.email,
+        "token": reset_token,
+        "date_creation": datetime.now(timezone.utc),
+        "date_expiration": datetime.now(timezone.utc) + timedelta(hours=1),
+        "utilise": False
+    })
+    
+    # Préparer l'email de réinitialisation
+    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+    reset_url = f"{frontend_url}/reset-password?token={reset_token}"
+    
+    email_subject = "École Smart - Réinitialisation de votre mot de passe"
+    email_content = f"""
+    <html>
+        <body>
+            <h2>Réinitialisation de mot de passe</h2>
+            <p>Bonjour {user['nom']} {user['prenoms']},</p>
+            <p>Vous avez demandé la réinitialisation de votre mot de passe pour École Smart.</p>
+            <p>Cliquez sur le lien ci-dessous pour créer un nouveau mot de passe :</p>
+            <p><a href="{reset_url}" style="background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block;">Réinitialiser mon mot de passe</a></p>
+            <p>Ce lien expire dans 1 heure.</p>
+            <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+            <br>
+            <p>L'équipe École Smart</p>
+        </body>
+    </html>
+    """
+    
+    # Envoyer l'email
+    await send_email(reset_request.email, email_subject, email_content)
+    
+    return {"message": "Si l'email existe, un lien de réinitialisation a été envoyé"}
+
+@api_router.post("/auth/password-reset-confirm")
+async def confirm_password_reset(reset_confirm: PasswordResetConfirm):
+    """Confirmer la réinitialisation de mot de passe"""
+    # Vérifier le token
+    email = verify_reset_token(reset_confirm.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token invalide ou expiré"
+        )
+    
+    # Vérifier que le token n'a pas déjà été utilisé
+    token_doc = await db.password_reset_tokens.find_one({
+        "token": reset_confirm.token,
+        "utilise": False
+    })
+    
+    if not token_doc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token invalide ou déjà utilisé"
+        )
+    
+    # Vérifier que l'utilisateur existe
+    user = await db.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur introuvable"
+        )
+    
+    # Mettre à jour le mot de passe
+    hashed_password = get_password_hash(reset_confirm.nouveau_mot_de_passe)
+    
+    await db.users.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "mot_de_passe": hashed_password,
+                "date_modification": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Marquer le token comme utilisé
+    await db.password_reset_tokens.update_one(
+        {"_id": token_doc["_id"]},
+        {"$set": {"utilise": True, "date_utilisation": datetime.now(timezone.utc)}}
+    )
+    
+    return {"message": "Mot de passe réinitialisé avec succès"}
+
+@api_router.post("/auth/link-parent-child")
+async def link_parent_child(link_data: ParentChildLink, current_user: dict = Depends(get_current_user)):
+    """Lier un parent à un élève"""
+    if current_user["role"] not in ["administrateur", "parent"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # Si c'est un parent, il ne peut se lier qu'à lui-même
+    if current_user["role"] == "parent" and link_data.parent_email != current_user["email"]:
+        raise HTTPException(status_code=403, detail="Vous ne pouvez lier que vos propres enfants")
+    
+    # Vérifier que le parent existe
+    parent = await db.users.find_one({"email": link_data.parent_email, "role": "parent"})
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent introuvable")
+    
+    # Vérifier que l'élève existe
+    eleve = await db.eleves.find_one({"_id": link_data.eleve_id})
+    if not eleve:
+        raise HTTPException(status_code=404, detail="Élève introuvable")
+    
+    # Vérifier si la liaison existe déjà
+    existing_link = await db.parent_child_links.find_one({
+        "parent_id": parent["_id"],
+        "eleve_id": link_data.eleve_id
+    })
+    
+    if existing_link:
+        raise HTTPException(status_code=400, detail="Cette liaison parent-enfant existe déjà")
+    
+    # Créer la liaison
+    link_doc = {
+        "_id": str(uuid.uuid4()),
+        "parent_id": parent["_id"],
+        "parent_email": link_data.parent_email,
+        "eleve_id": link_data.eleve_id,
+        "eleve_nom": f"{eleve['nom']} {eleve['prenoms']}",
+        "eleve_matricule": eleve["matricule"],
+        "relation": link_data.relation,
+        "date_creation": datetime.now(timezone.utc),
+        "actif": True,
+        "cree_par": current_user["_id"]
+    }
+    
+    await db.parent_child_links.insert_one(link_doc)
+    
+    return {
+        "message": f"Liaison créée avec succès entre {link_data.parent_email} et {eleve['nom']} {eleve['prenoms']}",
+        "liaison": link_doc
+    }
+
+@api_router.get("/auth/my-children")
+async def get_my_children(current_user: dict = Depends(get_current_user)):
+    """Récupérer la liste des enfants d'un parent"""
+    if current_user["role"] != "parent":
+        raise HTTPException(status_code=403, detail="Accès réservé aux parents")
+    
+    # Récupérer les liaisons actives
+    pipeline = [
+        {"$match": {"parent_id": current_user["_id"], "actif": True}},
+        {"$lookup": {
+            "from": "eleves",
+            "localField": "eleve_id",
+            "foreignField": "_id",
+            "as": "eleve"
+        }},
+        {"$unwind": "$eleve"},
+        {"$project": {
+            "_id": 1,
+            "relation": 1,
+            "date_creation": 1,
+            "eleve": {
+                "_id": "$eleve._id",
+                "matricule": "$eleve.matricule",
+                "nom": "$eleve.nom",
+                "prenoms": "$eleve.prenoms",
+                "classe": "$eleve.classe",
+                "date_naissance": "$eleve.date_naissance"
+            }
+        }}
+    ]
+    
+    cursor = db.parent_child_links.aggregate(pipeline)
+    liaisons = await cursor.to_list(length=None)
+    
+    # Nettoyer les ObjectIds
+    for liaison in liaisons:
+        liaison["_id"] = str(liaison["_id"])
+        liaison["eleve"]["_id"] = str(liaison["eleve"]["_id"])
+    
+    return {"enfants": liaisons}
+
+@api_router.post("/auth/enable-2fa")
+async def enable_2fa(enable_request: Enable2FARequest, current_user: dict = Depends(get_current_user)):
+    """Activer la 2FA pour un utilisateur"""
+    # Vérifier le mot de passe actuel
+    if not verify_password(enable_request.mot_de_passe, current_user["mot_de_passe"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mot de passe incorrect"
+        )
+    
+    # Générer un secret 2FA
+    secret_2fa = generate_2fa_secret()
+    qr_url = generate_2fa_qr_url(current_user["email"], secret_2fa)
+    
+    # Stocker temporairement le secret (pas encore activé)
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$set": {
+                "secret_2fa_temp": secret_2fa,
+                "date_modification": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Secret 2FA généré. Scannez le QR code avec votre application d'authentification.",
+        "secret_2fa": secret_2fa,
+        "qr_url": qr_url,
+        "instructions": "1. Installez Google Authenticator ou une app similaire\n2. Scannez le QR code\n3. Entrez le code généré pour confirmer l'activation"
+    }
+
+@api_router.post("/auth/confirm-2fa")
+async def confirm_2fa(confirm_request: Confirm2FARequest, current_user: dict = Depends(get_current_user)):
+    """Confirmer l'activation de la 2FA"""
+    user = await db.users.find_one({"_id": current_user["_id"]})
+    
+    if not user.get("secret_2fa_temp"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aucune activation 2FA en cours"
+        )
+    
+    # Vérifier le code fourni
+    if not verify_2fa_code(confirm_request.code_secret, confirm_request.code_verification):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code de vérification incorrect"
+        )
+    
+    # Activer la 2FA définitivement
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$set": {
+                "secret_2fa": user["secret_2fa_temp"],
+                "2fa_active": True,
+                "date_activation_2fa": datetime.now(timezone.utc),
+                "date_modification": datetime.now(timezone.utc)
+            },
+            "$unset": {"secret_2fa_temp": ""}
+        }
+    )
+    
+    return {"message": "2FA activée avec succès!"}
+
+@api_router.post("/auth/disable-2fa")
+async def disable_2fa(verify_request: Verify2FARequest, current_user: dict = Depends(get_current_user)):
+    """Désactiver la 2FA"""
+    user = await db.users.find_one({"_id": current_user["_id"]})
+    
+    if not user.get("2fa_active") or not user.get("secret_2fa"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="2FA non active"
+        )
+    
+    # Vérifier le code 2FA
+    if not verify_2fa_code(user["secret_2fa"], verify_request.code_2fa):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code 2FA incorrect"
+        )
+    
+    # Désactiver la 2FA
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$unset": {"secret_2fa": "", "2fa_active": "", "date_activation_2fa": ""},
+            "$set": {"date_modification": datetime.now(timezone.utc)}
+        }
+    )
+    
+    return {"message": "2FA désactivée avec succès"}
+
+@api_router.post("/auth/import-users")
+async def import_users_from_csv(
+    users_data: List[UserImportItem],
+    current_user: dict = Depends(get_current_user)
+):
+    """Importer des utilisateurs en masse (CSV)"""
+    if current_user["role"] != "administrateur":
+        raise HTTPException(status_code=403, detail="Accès refusé - Administrateur seulement")
+    
+    results = {
+        "total": len(users_data),
+        "success": 0,
+        "errors": [],
+        "users_created": []
+    }
+    
+    for i, user_data in enumerate(users_data):
+        try:
+            # Vérifier si l'utilisateur existe déjà
+            existing_user = await db.users.find_one({"email": user_data.email})
+            if existing_user:
+                results["errors"].append({
+                    "ligne": i + 1,
+                    "email": user_data.email,
+                    "erreur": "Utilisateur déjà existant"
+                })
+                continue
+            
+            # Créer l'utilisateur
+            hashed_password = get_password_hash(user_data.mot_de_passe_temporaire)
+            
+            user_doc = {
+                "_id": str(uuid.uuid4()),
+                "email": user_data.email,
+                "mot_de_passe": hashed_password,
+                "nom": user_data.nom,
+                "prenoms": user_data.prenoms,
+                "role": user_data.role,
+                "telephone": user_data.telephone,
+                "actif": True,
+                "mot_de_passe_temporaire": True,  # Forcer le changement au premier login
+                "importe_par": current_user["_id"],
+                "date_creation": datetime.now(timezone.utc),
+                "date_modification": datetime.now(timezone.utc)
+            }
+            
+            await db.users.insert_one(user_doc)
+            
+            # Envoyer email avec mot de passe temporaire
+            email_subject = "École Smart - Votre compte a été créé"
+            email_content = f"""
+            <html>
+                <body>
+                    <h2>Bienvenue dans École Smart</h2>
+                    <p>Bonjour {user_data.nom} {user_data.prenoms},</p>
+                    <p>Votre compte a été créé avec succès.</p>
+                    <p><strong>Email :</strong> {user_data.email}</p>
+                    <p><strong>Mot de passe temporaire :</strong> {user_data.mot_de_passe_temporaire}</p>
+                    <p><strong>Rôle :</strong> {user_data.role}</p>
+                    <p style="color: red;"><strong>Important :</strong> Vous devrez changer ce mot de passe lors de votre première connexion.</p>
+                    <p>Connectez-vous sur : <a href="http://localhost:3000">École Smart</a></p>
+                    <br>
+                    <p>L'équipe École Smart</p>
+                </body>
+            </html>
+            """
+            
+            await send_email(user_data.email, email_subject, email_content)
+            
+            results["success"] += 1
+            results["users_created"].append({
+                "email": user_data.email,
+                "nom": f"{user_data.nom} {user_data.prenoms}",
+                "role": user_data.role
+            })
+            
+        except Exception as e:
+            results["errors"].append({
+                "ligne": i + 1,
+                "email": user_data.email,
+                "erreur": str(e)
+            })
+    
+    return {
+        "message": f"Import terminé: {results['success']}/{results['total']} utilisateurs créés",
+        "details": results
+    }
+
 # Routes de gestion des élèves
 @api_router.post("/eleves")
 async def create_eleve(eleve_data: EleveCreate, current_user: dict = Depends(get_current_user)):
