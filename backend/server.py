@@ -582,7 +582,7 @@ async def register_user(user_data: UserCreate):
 
 @api_router.post("/auth/login", response_model=Token)
 async def login_user(user_credentials: UserLogin):
-    """Connexion d'un utilisateur"""
+    """Connexion d'un utilisateur avec support 2FA"""
     user = await db.users.find_one({"email": user_credentials.email})
     if not user or not verify_password(user_credentials.mot_de_passe, user["mot_de_passe"]):
         raise HTTPException(
@@ -596,17 +596,40 @@ async def login_user(user_credentials: UserLogin):
             detail="Compte désactivé"
         )
     
+    # Vérification 2FA si activée
+    if user.get("2fa_active", False) and user.get("secret_2fa"):
+        if not user_credentials.code_2fa:
+            raise HTTPException(
+                status_code=status.HTTP_202_ACCEPTED,  # Code spécial pour indiquer qu'il faut la 2FA
+                detail="Code 2FA requis"
+            )
+        
+        if not verify_2fa_code(user["secret_2fa"], user_credentials.code_2fa):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Code 2FA incorrect"
+            )
+    
+    # Vérifier si c'est un mot de passe temporaire
+    needs_password_change = user.get("mot_de_passe_temporaire", False)
+    
     # Génération du token
     access_token = create_access_token(data={"sub": user["email"]})
     
     # Préparation de la réponse
-    user_response = {k: str(v) if isinstance(v, ObjectId) else v for k, v in user.items() if k != "mot_de_passe"}
+    user_response = {k: str(v) if isinstance(v, ObjectId) else v for k, v in user.items() if k not in ["mot_de_passe", "secret_2fa", "secret_2fa_temp"]}
     
-    return {
+    response_data = {
         "access_token": access_token,
         "token_type": "bearer",
         "user": user_response
     }
+    
+    if needs_password_change:
+        response_data["requires_password_change"] = True
+        response_data["message"] = "Vous devez changer votre mot de passe temporaire"
+    
+    return response_data
 
 @api_router.post("/auth/google/session")
 async def process_google_session(session_request: GoogleSessionRequest):
