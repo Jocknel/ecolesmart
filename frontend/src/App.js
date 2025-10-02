@@ -899,7 +899,43 @@ const Dashboard = ({ user }) => {
     );
   }
 
-// Duplicate Dashboard component removed - using enhanced version above
+  return (
+    <div className="space-y-6" data-testid="dashboard-content">
+      <div>
+        <h2 className="text-3xl font-bold text-gray-900">Tableau de bord</h2>
+        <p className="text-gray-600 mt-2">
+          {user?.role === 'administrateur' && 'Vue d\'ensemble de votre école'}
+          {user?.role === 'enseignant' && 'Vos classes et élèves'}
+          {user?.role === 'parent' && 'Suivi de vos enfants'}
+          {user?.role === 'eleve' && 'Votre parcours scolaire'}
+        </p>
+      </div>
+
+      {/* Contenu spécifique au rôle */}
+      {getRoleSpecificContent()}
+
+      {/* Section commune pour tous les rôles (sauf élève) */}
+      {user?.role !== 'eleve' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Répartition des élèves par classe</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {stats?.eleves?.repartition_classes?.map((item, index) => (
+                <div key={index} className="text-center p-4 bg-gray-50 rounded-lg">
+                  <p className="text-lg font-bold text-blue-600">{item._id}</p>
+                  <p className="text-2xl font-bold text-gray-900">{item.count}</p>
+                  <p className="text-sm text-gray-600">élèves</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
 
 // Composant Gestion des Élèves
 const ElevesComponent = ({ user }) => {
