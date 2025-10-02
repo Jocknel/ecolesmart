@@ -187,63 +187,205 @@ const AuthComponent = ({ onAuthSuccess }) => {
     setLoading(true);
 
     try {
-      // Validation côté client pour l'inscription
+      // Validation côté client renforcée pour l'inscription
       if (!isLogin) {
+        // Validation email
+        if (!formData.email || !formData.email.includes('@')) {
+          toast.error('Veuillez saisir un email valide');
+          setLoading(false);
+          return;
+        }
+        
+        // Validation mot de passe
+        if (formData.mot_de_passe.length < 6) {
+          toast.error('Le mot de passe doit contenir au moins 6 caractères');
+          setLoading(false);
+          return;
+        }
+        
         if (formData.mot_de_passe !== formData.confirmer_mot_de_passe) {
           toast.error('Les mots de passe ne correspondent pas');
           setLoading(false);
           return;
         }
         
+        // Validation nom et prénoms
+        if (!formData.nom || formData.nom.length < 2) {
+          toast.error('Le nom doit contenir au moins 2 caractères');
+          setLoading(false);
+          return;
+        }
+        
+        if (!formData.prenoms || formData.prenoms.length < 2) {
+          toast.error('Les prénoms doivent contenir au moins 2 caractères');
+          setLoading(false);
+          return;
+        }
+        
+        // Validation téléphone si fourni
+        if (formData.telephone && formData.telephone.length > 0) {
+          const phoneRegex = /^(\+224|224)?[6-7][0-9]{8}$/;
+          const cleanPhone = formData.telephone.replace(/[\s\-\.]/g, '');
+          if (!phoneRegex.test(cleanPhone)) {
+            toast.error('Format de numéro guinéen invalide (ex: +224 664 123 456)');
+            setLoading(false);
+            return;
+          }
+        }
+        
         if (formData.role === 'administrateur' && !formData.code_admin) {
-          toast.error('Code administrateur requis pour ce rôle');
+          toast.error('Code administrateur requis pour ce rôle. Contactez l\'administration.');
+          setLoading(false);
+          return;
+        }
+      } else {
+        // Validation pour la connexion
+        if (!formData.email || !formData.email.includes('@')) {
+          toast.error('Veuillez saisir un email valide');
+          setLoading(false);
+          return;
+        }
+        
+        if (!formData.mot_de_passe) {
+          toast.error('Veuillez saisir votre mot de passe');
           setLoading(false);
           return;
         }
       }
 
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
-      const loginData = { ...formData };
+      const requestData = { ...formData };
       
       // Ajouter le code 2FA si nécessaire
       if (isLogin && needs2FA && code2FA) {
-        loginData.code_2fa = code2FA;
+        if (code2FA.length !== 6) {
+          toast.error('Le code 2FA doit contenir 6 chiffres');
+          setLoading(false);
+          return;
+        }
+        requestData.code_2fa = code2FA;
       }
       
-      const response = await axios.post(endpoint, loginData);
+      const response = await axios.post(endpoint, requestData);
       
       if (response.data.access_token) {
+        // Stocker les données utilisateur
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
         
+        // Messages de succès personnalisés selon le rôle
+        const roleMessages = {
+          'administrateur': 'Connexion administrateur réussie! Bienvenue dans l\'interface d\'administration.',
+          'enseignant': 'Connexion enseignant réussie! Accédez à vos classes et élèves.',
+          'parent': 'Connexion parent réussie! Suivez le parcours scolaire de vos enfants.',
+          'eleve': 'Connexion élève réussie! Consultez vos notes et devoirs.'
+        };
+        
+        const welcomeMessage = isLogin 
+          ? roleMessages[response.data.user.role] || 'Connexion réussie!'
+          : `Inscription réussie! Bienvenue ${response.data.user.nom} ${response.data.user.prenoms}`;
+        
         // Vérifier si changement de mot de passe requis
         if (response.data.requires_password_change) {
-          toast.warning(response.data.message || 'Vous devez changer votre mot de passe temporaire');
-          // On peut implémenter un modal ici ou rediriger
+          toast.warning('⚠️ Changement de mot de passe requis. Vous devez changer votre mot de passe temporaire.', {
+            duration: 5000
+          });
+        } else {
+          toast.success(welcomeMessage, { duration: 4000 });
         }
         
-        onAuthSuccess(response.data.user);
-        toast.success(isLogin ? 'Connexion réussie!' : 'Inscription réussie!');
+        // Redirection avec un petit délai pour que l'utilisateur voie le message
+        setTimeout(() => {
+          onAuthSuccess(response.data.user);
+        }, 1000);
       }
     } catch (error) {
+      console.error('Erreur d\'authentification:', error);
+      
       // Gestion spéciale pour la 2FA
       if (error.response?.status === 202) {
         setNeeds2FA(true);
-        toast.info('Code 2FA requis');
+        toast.info('🔐 Code 2FA requis. Entrez le code de votre application d\'authentification.', {
+          duration: 5000
+        });
         setLoading(false);
         return;
       }
       
-      const errorMessage = error.response?.data?.detail;
-      if (typeof errorMessage === 'string') {
-        toast.error(errorMessage);
-      } else if (Array.isArray(errorMessage)) {
-        // Gestion des erreurs de validation Pydantic
-        const firstError = errorMessage[0];
-        toast.error(firstError?.msg || 'Erreur de validation');
+      // Gestion des erreurs spécifiques
+      const status = error.response?.status;
+      const errorDetail = error.response?.data?.detail;
+      
+      if (status === 401) {
+        if (errorDetail === 'Email ou mot de passe incorrect') {
+          toast.error('❌ Email ou mot de passe incorrect. Vérifiez vos identifiants.', {
+            duration: 5000
+          });
+        } else if (errorDetail === 'Compte désactivé') {
+          toast.error('❌ Votre compte a été désactivé. Contactez l\'administration.', {
+            duration: 5000
+          });
+        } else if (errorDetail === 'Code 2FA incorrect') {
+          toast.error('❌ Code 2FA incorrect. Vérifiez le code dans votre application.', {
+            duration: 5000
+          });
+        } else {
+          toast.error('❌ Authentification échouée. Vérifiez vos identifiants.', {
+            duration: 5000
+          });
+        }
+      } else if (status === 400) {
+        if (typeof errorDetail === 'string') {
+          if (errorDetail.includes('utilisateur avec cet email existe déjà')) {
+            toast.error('❌ Un compte existe déjà avec cet email. Essayez de vous connecter ou utilisez "Mot de passe oublié".', {
+              duration: 6000
+            });
+          } else if (errorDetail.includes('Code administrateur')) {
+            toast.error('❌ Code administrateur invalide. Contactez un administrateur pour obtenir un code valide.', {
+              duration: 6000
+            });
+          } else {
+            toast.error(`❌ ${errorDetail}`, { duration: 5000 });
+          }
+        } else if (Array.isArray(errorDetail)) {
+          // Gestion des erreurs de validation Pydantic
+          const firstError = errorDetail[0];
+          const field = firstError?.loc?.[1] || 'champ';
+          const message = firstError?.msg || 'Erreur de validation';
+          
+          const fieldNames = {
+            'email': 'Email',
+            'mot_de_passe': 'Mot de passe', 
+            'nom': 'Nom',
+            'prenoms': 'Prénoms',
+            'telephone': 'Téléphone'
+          };
+          
+          toast.error(`❌ ${fieldNames[field] || field}: ${message}`, {
+            duration: 5000
+          });
+        } else {
+          toast.error('❌ Données invalides. Vérifiez les informations saisies.', {
+            duration: 5000
+          });
+        }
+      } else if (status === 422) {
+        toast.error('❌ Format de données incorrect. Vérifiez tous les champs requis.', {
+          duration: 5000
+        });
+      } else if (status >= 500) {
+        toast.error('❌ Erreur serveur. Réessayez dans quelques instants ou contactez le support.', {
+          duration: 6000
+        });
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        toast.error('❌ Problème de connexion. Vérifiez votre connexion internet.', {
+          duration: 6000
+        });
       } else {
-        toast.error('Erreur d\'authentification');
+        toast.error('❌ Une erreur inattendue s\'est produite. Réessayez.', {
+          duration: 5000
+        });
       }
     } finally {
       setLoading(false);
