@@ -4754,8 +4754,12 @@ const App = () => {
     processGoogleAuth();
   }, []);
 
-  const handleAuthSuccess = (userData) => {
+  const handleAuthSuccess = (userData, isNewRegistration = false) => {
     setUser(userData);
+    // Afficher le guide de bienvenue pour les nouvelles inscriptions
+    if (isNewRegistration) {
+      setShowWelcomeGuide(true);
+    }
   };
 
   const handleLogout = () => {
