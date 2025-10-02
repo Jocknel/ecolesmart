@@ -648,10 +648,15 @@ const AuthComponent = ({ onAuthSuccess }) => {
                   <Input
                     id="telephone"
                     name="telephone"
+                    type="tel"
                     value={formData.telephone}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('telephone', e.target.value)}
                     placeholder="+224 6XX XXX XXX"
+                    className={fieldErrors.telephone ? 'border-red-500' : ''}
                   />
+                  {fieldErrors.telephone && (
+                    <p className="text-sm text-red-500">{fieldErrors.telephone}</p>
+                  )}
                 </div>
               </>
             )}
