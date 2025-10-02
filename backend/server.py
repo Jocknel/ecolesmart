@@ -108,6 +108,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     mot_de_passe: str
+    code_2fa: Optional[str] = None  # Code 2FA optionnel
 
 class Token(BaseModel):
     access_token: str
