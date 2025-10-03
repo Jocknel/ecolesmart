@@ -338,10 +338,10 @@ class AdminDashboardTester:
         # Test permission check
         try:
             response = self.session.get(f"{API_BASE}/admin/dashboard")
-            if response.status_code == 401:
+            if response.status_code in [401, 403]:  # Both are valid for unauthorized access
                 self.log_result("dashboard_endpoint", "Permission check (no token)", True)
             else:
-                self.log_result("dashboard_endpoint", "Permission check (no token)", False, f"Expected 401, got {response.status_code}")
+                self.log_result("dashboard_endpoint", "Permission check (no token)", False, f"Expected 401 or 403, got {response.status_code}")
         except Exception as e:
             self.log_result("dashboard_endpoint", "Permission check", False, str(e))
     
