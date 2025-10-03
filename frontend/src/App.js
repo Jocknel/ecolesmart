@@ -5518,6 +5518,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'preregistration'
 
   useEffect(() => {
     const processGoogleAuth = async () => {
