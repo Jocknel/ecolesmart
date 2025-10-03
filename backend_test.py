@@ -33,7 +33,8 @@ class AuthenticationTester:
             "csv_import": {"passed": 0, "failed": 0, "errors": []},
             "2fa_system": {"passed": 0, "failed": 0, "errors": []},
             "enhanced_login": {"passed": 0, "failed": 0, "errors": []},
-            "temp_password": {"passed": 0, "failed": 0, "errors": []}
+            "temp_password": {"passed": 0, "failed": 0, "errors": []},
+            "pre_registration": {"passed": 0, "failed": 0, "errors": []}
         }
     
     def log_result(self, category, test_name, success, error_msg=None):
