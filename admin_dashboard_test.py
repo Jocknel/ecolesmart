@@ -76,7 +76,8 @@ class AdminDashboardTester:
                     "nom": "Admin",
                     "prenoms": "Système",
                     "role": "administrateur",
-                    "telephone": "+224601234567"
+                    "telephone": "+224601234567",
+                    "code_admin": "ADMIN_ECOLE_2024"
                 }
                 
                 register_response = self.session.post(f"{API_BASE}/auth/register", json=admin_data)
