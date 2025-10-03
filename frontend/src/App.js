@@ -509,45 +509,109 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
   );
 };
 
-// Composant Page de Pré-inscription avec étapes
+// Composant Page de Pré-inscription moderne et conviviale
 const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Étape 1: Informations Élève
-    nom_complet: '',
+    nom_eleve: '',
+    prenoms_eleve: '',
     date_naissance: '',
+    sexe: '',
+    lieu_naissance: '',
+    nationalite: 'Guinéenne',
     
-    // Étape 2: Contacts
-    email: '',
-    telephone: '',
-    
-    // Étape 3: Scolarité
+    // Étape 2: Scolarité
     niveau_souhaite: '',
+    serie_bac: '', // Pour les terminales
     etablissement_actuel: '',
+    niveau_actuel: '',
+    moyenne_generale: '',
     
-    // Étape 4: Parent/Tuteur
+    // Étape 3: Informations Parent/Tuteur
     nom_parent: '',
     prenoms_parent: '',
+    profession_parent: '',
     telephone_parent: '',
     email_parent: '',
+    adresse_parent: '',
     
-    // Étape 5: Documents
-    documents: [],
+    // Étape 4: Contacts & Préférences
+    email: '',
+    telephone: '',
+    transport: 'personnel', // personnel, bus_scolaire
+    cantine: false,
+    activites_extra: [],
     
-    // Étape 6: Validation
-    accepte_conditions: false
+    // Étape 5: Documents & Validation
+    documents_fournis: {},
+    accepte_conditions: false,
+    autorisation_photo: false,
+    newsletter: true
   });
   
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   const steps = [
-    { id: 1, title: 'Informations Élève', subtitle: 'Identité de l\'élève' },
-    { id: 2, title: 'Contacts', subtitle: 'Coordonnées' },
-    { id: 3, title: 'Scolarité', subtitle: 'Parcours scolaire' },
-    { id: 4, title: 'Parent/Tuteur', subtitle: 'Contact responsable' },
-    { id: 5, title: 'Documents', subtitle: 'Pièces justificatives' },
-    { id: 6, title: 'Validation', subtitle: 'Confirmation' }
+    { 
+      id: 1, 
+      title: 'Informations Élève', 
+      subtitle: 'Identité et état civil',
+      icon: '👤',
+      description: 'Saisissez les informations personnelles de l\'élève'
+    },
+    { 
+      id: 2, 
+      title: 'Parcours Scolaire', 
+      subtitle: 'Niveau et établissement',
+      icon: '🎓',
+      description: 'Renseignez le niveau souhaité et le parcours actuel'
+    },
+    { 
+      id: 3, 
+      title: 'Responsable Légal', 
+      subtitle: 'Parent ou tuteur',
+      icon: '👪',
+      description: 'Coordonnées du responsable légal de l\'élève'
+    },
+    { 
+      id: 4, 
+      title: 'Contacts & Services', 
+      subtitle: 'Communication et options',
+      icon: '📞',
+      description: 'Moyens de contact et services scolaires'
+    },
+    { 
+      id: 5, 
+      title: 'Finalisation', 
+      subtitle: 'Documents et validation',
+      icon: '✅',
+      description: 'Vérification et accord sur les conditions'
+    }
+  ];
+
+  const niveauxDisponibles = [
+    { value: 'CP1', label: 'CP1 (Cours Préparatoire 1ère année)', prix: '800 000' },
+    { value: 'CP2', label: 'CP2 (Cours Préparatoire 2ème année)', prix: '850 000' },
+    { value: 'CE1', label: 'CE1 (Cours Élémentaire 1ère année)', prix: '900 000' },
+    { value: 'CE2', label: 'CE2 (Cours Élémentaire 2ème année)', prix: '950 000' },
+    { value: 'CM1', label: 'CM1 (Cours Moyen 1ère année)', prix: '1 000 000' },
+    { value: 'CM2', label: 'CM2 (Cours Moyen 2ème année)', prix: '1 050 000' },
+    { value: '6ème', label: '6ème (Première année du collège)', prix: '1 200 000' },
+    { value: '5ème', label: '5ème (Deuxième année du collège)', prix: '1 250 000' },
+    { value: '4ème', label: '4ème (Troisième année du collège)', prix: '1 300 000' },
+    { value: '3ème', label: '3ème (Préparation BEPC)', prix: '1 350 000' },
+    { value: '2nde', label: '2nde (Seconde générale)', prix: '1 500 000' },
+    { value: '1ère', label: '1ère (Première générale)', prix: '1 600 000' },
+    { value: 'Tle', label: 'Terminale (Préparation BAC)', prix: '1 700 000' }
+  ];
+
+  const activitesExtrascolaires = [
+    'Football', 'Basketball', 'Volleyball', 'Tennis de table',
+    'Théâtre', 'Musique', 'Danse', 'Arts plastiques',
+    'Club scientifique', 'Club informatique', 'Club de lecture',
+    'Débats et éloquence', 'Échecs', 'Jardinage'
   ];
 
   const handleInputChange = (name, value) => {
