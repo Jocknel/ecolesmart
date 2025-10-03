@@ -401,6 +401,116 @@ class PreRegistrationRequest(BaseModel):
             raise ValueError(f'Niveau doit être l\'un de: {", ".join(niveaux_valides)}')
         return v
 
+# Nouveaux modèles pour les dashboards
+class KPIData(BaseModel):
+    effectif_total: int
+    taux_presence: float
+    paiements_mois: float
+    paiements_montant: int
+    alertes_actives: int
+
+class AlerteAdmin(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # "critique", "attention", "info"
+    titre: str
+    description: str
+    date_creation: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    statut: str = Field(default="active")  # "active", "traitee", "ignoree"
+    priorite: int = Field(default=1)  # 1=haute, 2=moyenne, 3=faible
+
+class ActionRequise(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    titre: str
+    description: str
+    type: str  # "validation", "approbation", "traitement"
+    date_creation: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    echeance: Optional[datetime] = None
+    statut: str = Field(default="en_attente")
+
+class ActiviteRecente(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # "connexion", "modification", "creation", "suppression"
+    utilisateur_id: str
+    utilisateur_nom: str
+    description: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    details: Optional[Dict[str, Any]] = None
+
+class EvenementCalendrier(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    titre: str
+    description: Optional[str] = None
+    date_debut: datetime
+    date_fin: Optional[datetime] = None
+    type: str  # "echeance", "reunion", "examen", "conseil_classe", "formation"
+    participants: List[str] = Field(default_factory=list)  # IDs des utilisateurs concernés
+    statut: str = Field(default="planifie")  # "planifie", "en_cours", "termine", "annule"
+
+class StatistiqueEleve(BaseModel):
+    eleve_id: str
+    nom_complet: str
+    classe: str
+    moyenne_generale: Optional[float] = None
+    taux_presence: Optional[float] = None
+    nombre_retards: int = Field(default=0)
+    nombre_absences: int = Field(default=0)
+    dernier_paiement: Optional[datetime] = None
+    statut_paiement: str = Field(default="a_jour")  # "a_jour", "retard", "critique"
+
+class StatistiqueClasse(BaseModel):
+    classe: str
+    niveau: str
+    effectif: int
+    moyenne_generale: Optional[float] = None
+    taux_presence: float
+    enseignant_principal: Optional[str] = None
+    nombre_evaluations: int = Field(default=0)
+
+class Note(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    eleve_id: str
+    enseignant_id: str
+    matiere: str
+    note_sur: int = Field(default=20)
+    note_obtenue: float
+    coefficient: float = Field(default=1.0)
+    type_evaluation: str  # "controle", "devoir", "composition", "oral"
+    date_evaluation: date
+    date_saisie: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    commentaire: Optional[str] = None
+
+class Presence(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    eleve_id: str
+    date: date
+    statut: str  # "present", "absent", "retard", "absent_justifie"
+    heure_arrivee: Optional[str] = None
+    justification: Optional[str] = None
+    saisie_par: str  # ID de l'utilisateur qui a saisi
+    date_saisie: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Paiement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    eleve_id: str
+    parent_id: str
+    montant: float
+    type_frais: str  # "scolarite", "cantine", "transport", "activite"
+    periode: str  # "trimestre_1", "trimestre_2", "trimestre_3", "annuel"
+    date_echeance: date
+    date_paiement: Optional[date] = None
+    statut: str = Field(default="en_attente")  # "en_attente", "paye", "retard", "partiel"
+    mode_paiement: Optional[str] = None  # "especes", "orange_money", "mtn_money", "virement"
+    reference_transaction: Optional[str] = None
+
+class DashboardAdminResponse(BaseModel):
+    kpi: KPIData
+    alertes_critiques: List[AlerteAdmin]
+    actions_requises: List[ActionRequise]
+    activite_recente: List[ActiviteRecente]
+    evenements_calendrier: List[EvenementCalendrier]
+    statistiques_classes: List[StatistiqueClasse]
+    tendances: Dict[str, Any]
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
