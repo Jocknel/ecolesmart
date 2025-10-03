@@ -624,19 +624,78 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
     }
   };
 
+  const handleActivityToggle = (activity) => {
+    setFormData(prev => ({
+      ...prev,
+      activites_extra: prev.activites_extra.includes(activity)
+        ? prev.activites_extra.filter(a => a !== activity)
+        : [...prev.activites_extra, activity]
+    }));
+  };
+
+  const calculateAge = (dateString) => {
+    const birth = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const validateStep = (step) => {
     const errors = {};
     
     switch(step) {
       case 1:
-        if (!formData.nom_complet || formData.nom_complet.length < 3) {
-          errors.nom_complet = 'Le nom complet est requis (minimum 3 caractères)';
+        if (!formData.nom_eleve || formData.nom_eleve.length < 2) {
+          errors.nom_eleve = 'Le nom est requis (minimum 2 caractères)';
+        }
+        if (!formData.prenoms_eleve || formData.prenoms_eleve.length < 2) {
+          errors.prenoms_eleve = 'Les prénoms sont requis (minimum 2 caractères)';
         }
         if (!formData.date_naissance) {
           errors.date_naissance = 'La date de naissance est requise';
+        } else {
+          const age = calculateAge(formData.date_naissance);
+          if (age < 4 || age > 25) {
+            errors.date_naissance = 'Âge doit être entre 4 et 25 ans';
+          }
+        }
+        if (!formData.sexe) {
+          errors.sexe = 'Le sexe est requis';
+        }
+        if (!formData.lieu_naissance) {
+          errors.lieu_naissance = 'Le lieu de naissance est requis';
         }
         break;
       case 2:
+        if (!formData.niveau_souhaite) {
+          errors.niveau_souhaite = 'Le niveau souhaité est requis';
+        }
+        if (!formData.etablissement_actuel) {
+          errors.etablissement_actuel = 'L\'établissement actuel est requis';
+        }
+        if (formData.moyenne_generale && (isNaN(formData.moyenne_generale) || formData.moyenne_generale < 0 || formData.moyenne_generale > 20)) {
+          errors.moyenne_generale = 'La moyenne doit être entre 0 et 20';
+        }
+        break;
+      case 3:
+        if (!formData.nom_parent || formData.nom_parent.length < 2) {
+          errors.nom_parent = 'Le nom du parent/tuteur est requis';
+        }
+        if (!formData.prenoms_parent || formData.prenoms_parent.length < 2) {
+          errors.prenoms_parent = 'Les prénoms du parent/tuteur sont requis';
+        }
+        if (!formData.telephone_parent) {
+          errors.telephone_parent = 'Le téléphone du parent/tuteur est requis';
+        }
+        if (!formData.adresse_parent || formData.adresse_parent.length < 10) {
+          errors.adresse_parent = 'L\'adresse complète est requise';
+        }
+        break;
+      case 4:
         if (!formData.email || !formData.email.includes('@')) {
           errors.email = 'Un email valide est requis';
         }
@@ -644,22 +703,9 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
           errors.telephone = 'Le numéro de téléphone est requis';
         }
         break;
-      case 3:
-        if (!formData.niveau_souhaite) {
-          errors.niveau_souhaite = 'Le niveau souhaité est requis';
-        }
-        break;
-      case 4:
-        if (!formData.nom_parent) {
-          errors.nom_parent = 'Le nom du parent/tuteur est requis';
-        }
-        if (!formData.telephone_parent) {
-          errors.telephone_parent = 'Le téléphone du parent/tuteur est requis';
-        }
-        break;
-      case 6:
+      case 5:
         if (!formData.accepte_conditions) {
-          errors.accepte_conditions = 'Vous devez accepter les conditions';
+          errors.accepte_conditions = 'Vous devez accepter les conditions générales';
         }
         break;
     }
