@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Verify the Authentication & Users module against a detailed checklist to identify missing features and implement them: automatic parent-child linking, CSV user import, password recovery, and optional 2FA."
+## user_problem_statement: "Test the new showcase page and pre-registration system for Lycée Sainte-Étoile that I created. Test public landing page, navigation, 5-step pre-registration form, login page, and all interactive features."
 
 ## backend:
   - task: "Basic Authentication System"
