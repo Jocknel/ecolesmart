@@ -201,6 +201,18 @@
           agent: "testing"
           comment: "TESTED: Temporary password system fully functional. Route /auth/change-temporary-password working correctly. Users imported with temporary passwords can successfully change them on first login."
 
+  - task: "Pre-Registration System"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "TESTED: Pre-registration endpoint /api/auth/pre-register fully functional. ✅ Valid data creates pre-registration with unique ID and proper database entry. ✅ Duplicate email validation working (400 error). ✅ Conditions acceptance validation working (422 error for false). ✅ Invalid niveau_souhaite validation working (422 error). ✅ Response structure includes success, message, pre_registration_id, and details fields. All 5 test scenarios passed successfully."
+
 ## frontend:
   - task: "Authentication UI"
     implemented: true
