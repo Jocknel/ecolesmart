@@ -1259,26 +1259,30 @@ const AuthComponent = ({ onAuthSuccess, onBack }) => {
               {isLogin ? 'Se connecter avec Google' : 'S\'inscrire avec Google'}
             </Button>
 
-            <div className="text-center space-y-2">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-blue-600 hover:underline block mx-auto"
-              >
-                {isLogin ? 'Créer un compte' : 'Déjà un compte ? Se connecter'}
-              </button>
-              
-              {isLogin && (
+            {!isLogin && (
+              <div className="text-center space-y-2">
                 <button
                   type="button"
-                  onClick={() => setShowPasswordReset(true)}
-                  className="text-sm text-gray-600 hover:underline block mx-auto"
+                  onClick={() => setIsLogin(true)}
+                  className="text-sm text-blue-600 hover:underline"
                 >
-                  Mot de passe oublié ?
+                  Déjà un compte ? Se connecter
                 </button>
-              )}
-            
-            </div>
+              </div>
+            )}
+
+            {onBack && (
+              <div className="text-center mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onBack}
+                  className="text-sm"
+                >
+                  Retour à l'accueil
+                </Button>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
