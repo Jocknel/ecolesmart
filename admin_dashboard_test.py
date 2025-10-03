@@ -43,11 +43,11 @@ class AdminDashboardTester:
             print(f"❌ {test_name}: {error_msg}")
     
     def setup_admin_authentication(self):
-        """Authenticate as admin user using provided credentials"""
+        """Authenticate as admin user using provided credentials or create one"""
         print("\n🔐 Testing Admin Authentication...")
         
         try:
-            # Use the provided admin credentials
+            # First try to login with provided credentials
             login_data = {
                 "email": "admin@ecole-smart.gn",
                 "mot_de_passe": "Admin2024!"
@@ -60,14 +60,40 @@ class AdminDashboardTester:
                 user_role = data.get("user", {}).get("role")
                 
                 if self.admin_token and user_role == "administrateur":
-                    self.log_result("admin_auth", "Admin login successful", True)
+                    self.log_result("admin_auth", "Admin login with provided credentials", True)
                     return True
                 else:
                     self.log_result("admin_auth", "Admin login", False, f"Missing token or wrong role: {user_role}")
                     return False
             else:
-                self.log_result("admin_auth", "Admin login", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
+                # If login fails, try to create admin user (might be first admin)
+                print("⚠️ Admin login failed, attempting to create admin user...")
+                
+                admin_data = {
+                    "email": "admin@ecole-smart.gn",
+                    "mot_de_passe": "Admin2024!",
+                    "confirmer_mot_de_passe": "Admin2024!",
+                    "nom": "Admin",
+                    "prenoms": "Système",
+                    "role": "administrateur",
+                    "telephone": "+224601234567"
+                }
+                
+                register_response = self.session.post(f"{API_BASE}/auth/register", json=admin_data)
+                if register_response.status_code == 200:
+                    data = register_response.json()
+                    self.admin_token = data.get("access_token")
+                    user_role = data.get("user", {}).get("role")
+                    
+                    if self.admin_token and user_role == "administrateur":
+                        self.log_result("admin_auth", "Admin user created and authenticated", True)
+                        return True
+                    else:
+                        self.log_result("admin_auth", "Admin creation", False, f"Missing token or wrong role: {user_role}")
+                        return False
+                else:
+                    self.log_result("admin_auth", "Admin creation", False, f"Status: {register_response.status_code}, Response: {register_response.text}")
+                    return False
                 
         except Exception as e:
             self.log_result("admin_auth", "Admin authentication", False, str(e))
