@@ -314,10 +314,7 @@
 
 ## test_plan:
   current_focus:
-    - "Public Landing Page (Lycée Sainte-Étoile)"
-    - "Navigation Between Pages"
-    - "Pre-Registration Form (5 Steps)"
-    - "Login Page with Enhanced Features"
+    - "Admin Dashboard Endpoints"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
