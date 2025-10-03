@@ -213,6 +213,18 @@
           agent: "testing"
           comment: "TESTED: Pre-registration endpoint /api/auth/pre-register fully functional. ✅ Valid data creates pre-registration with unique ID and proper database entry. ✅ Duplicate email validation working (400 error). ✅ Conditions acceptance validation working (422 error for false). ✅ Invalid niveau_souhaite validation working (422 error). ✅ Response structure includes success, message, pre_registration_id, and details fields. All 5 test scenarios passed successfully."
 
+  - task: "Admin Dashboard Endpoints"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "TESTED: All three admin dashboard endpoints fully functional. ✅ POST /api/admin/generer-donnees-demo generates 1247 students with Guinean names, class statistics, alerts and actions. ✅ GET /api/admin/kpi returns real-time KPI with correct structure (effectif_total: 1247, taux_presence, paiements_mois, paiements_montant, alertes_actives). ✅ GET /api/admin/dashboard?periode=mois returns complete DashboardAdminResponse with all required sections: kpi, alertes_critiques, actions_requises, activite_recente, evenements_calendrier, statistiques_classes, tendances. ✅ Admin authentication working with provided credentials (admin@ecole-smart.gn / Admin2024!). ✅ Data consistency verified between endpoints. ✅ Admin permissions properly enforced (403 for unauthorized access). All requirements from review request satisfied."
+
 ## frontend:
   - task: "Public Landing Page (Lycée Sainte-Étoile)"
     implemented: true
