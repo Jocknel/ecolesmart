@@ -3669,6 +3669,163 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         }
     }
 
+# Routes Dashboard Administrateur
+@api_router.get("/admin/dashboard", response_model=DashboardAdminResponse)
+async def get_admin_dashboard(
+    periode: Optional[str] = Query("mois", description="Période des données: jour, semaine, mois, trimestre"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Dashboard complet pour les administrateurs."""
+    
+    # Vérifier que l'utilisateur est administrateur
+    if current_user.get("role") != "administrateur":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé aux administrateurs"
+        )
+    
+    # S'assurer que les données demo existent
+    await generer_donnees_demo()
+    
+    # Calculer les KPI
+    kpi = await calculer_kpi_admin()
+    
+    # Récupérer les alertes critiques
+    alertes_critiques = await db.alertes_admin.find(
+        {"statut": "active"}, 
+        limit=5
+    ).sort("priorite", 1).to_list(5)
+    alertes_critiques = [AlerteAdmin(**alerte) for alerte in alertes_critiques]
+    
+    # Récupérer les actions requises
+    actions_requises = await db.actions_requises.find(
+        {"statut": "en_attente"}, 
+        limit=10
+    ).sort("priorite", 1).to_list(10)
+    actions_requises = [ActionRequise(**action) for action in actions_requises]
+    
+    # Activités récentes (simulées pour la démo)
+    activite_recente = [
+        ActiviteRecente(
+            type="connexion",
+            utilisateur_id="user_123",
+            utilisateur_nom="CAMARA Aminata (Parent)",
+            description="Connexion à la plateforme",
+            timestamp=datetime.now(timezone.utc) - timedelta(minutes=15)
+        ),
+        ActiviteRecente(
+            type="modification",
+            utilisateur_id="user_456", 
+            utilisateur_nom="Prof. DIALLO Mohamed",
+            description="Mise à jour des notes de mathématiques - 4èmeA",
+            timestamp=datetime.now(timezone.utc) - timedelta(hours=2)
+        ),
+        ActiviteRecente(
+            type="creation",
+            utilisateur_id="user_789",
+            utilisateur_nom="Admin BARRY",
+            description="Création de 3 nouveaux comptes élèves",
+            timestamp=datetime.now(timezone.utc) - timedelta(hours=4)
+        )
+    ]
+    
+    # Événements du calendrier
+    evenements_calendrier = [
+        EvenementCalendrier(
+            titre="Conseil de classe 3ème",
+            description="Conseil de classe du troisième trimestre",
+            date_debut=datetime.now(timezone.utc) + timedelta(days=2),
+            type="conseil_classe",
+            participants=["admin", "enseignants_3eme"]
+        ),
+        EvenementCalendrier(
+            titre="Examens trimestriels",
+            description="Début des compositions du 2ème trimestre",
+            date_debut=datetime.now(timezone.utc) + timedelta(days=7),
+            date_fin=datetime.now(timezone.utc) + timedelta(days=14),
+            type="examen",
+            participants=["all_students", "all_teachers"]
+        ),
+        EvenementCalendrier(
+            titre="Réunion pédagogique",
+            description="Réunion mensuelle des enseignants",
+            date_debut=datetime.now(timezone.utc) + timedelta(days=5),
+            type="reunion",
+            participants=["enseignants", "direction"]
+        )
+    ]
+    
+    # Statistiques par classe
+    stats_classes = await db.statistiques_classes.find().sort("classe", 1).to_list(length=None)
+    statistiques_classes = [StatistiqueClasse(**stat) for stat in stats_classes]
+    
+    # Tendances et métriques avancées
+    tendances = {
+        "evolution_effectifs": {
+            "mois_precedent": 1235,
+            "variation": "+12 élèves",
+            "pourcentage": "+0.97%"
+        },
+        "evolution_paiements": {
+            "mois_precedent": 84.2,
+            "variation": "+3.2%",
+            "tendance": "amelioration"
+        },
+        "top_classes_presence": [
+            {"classe": "1ère", "taux": 96.8},
+            {"classe": "Tle", "taux": 95.4},
+            {"classe": "2nde", "taux": 94.1}
+        ],
+        "classes_attention": [
+            {"classe": "6ème", "taux_absence": 17.2, "raison": "Pic de maladie"},
+            {"classe": "4ème", "taux_absence": 15.8, "raison": "Évaluations manquées"}
+        ]
+    }
+    
+    return DashboardAdminResponse(
+        kpi=kpi,
+        alertes_critiques=alertes_critiques,
+        actions_requises=actions_requises,
+        activite_recente=activite_recente,
+        evenements_calendrier=evenements_calendrier,
+        statistiques_classes=statistiques_classes,
+        tendances=tendances
+    )
+
+@api_router.post("/admin/generer-donnees-demo")
+async def generer_donnees_demo_endpoint(current_user: dict = Depends(get_current_user)):
+    """Génère les données de démonstration pour les dashboards."""
+    
+    # Vérifier que l'utilisateur est administrateur
+    if current_user.get("role") != "administrateur":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé aux administrateurs"
+        )
+    
+    try:
+        await generer_donnees_demo()
+        return {"success": True, "message": "Données de démonstration générées avec succès"}
+    except Exception as e:
+        logger.error(f"Erreur génération données demo: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de la génération des données"
+        )
+
+@api_router.get("/admin/kpi")
+async def get_kpi_admin(current_user: dict = Depends(get_current_user)):
+    """Récupère uniquement les KPI administrateur pour des updates rapides."""
+    
+    if current_user.get("role") != "administrateur":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé aux administrateurs"
+        )
+    
+    kpi = await calculer_kpi_admin()
+    return kpi
+
 # Inclusion du routeur dans l'app
 app.include_router(api_router)
 
