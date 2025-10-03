@@ -5610,9 +5610,32 @@ const App = () => {
     );
   }
 
-  // Interface d'authentification
+  // Navigation pour les utilisateurs non connectés
   if (!user) {
-    return <AuthComponent onAuthSuccess={handleAuthSuccess} />;
+    switch(currentPage) {
+      case 'login':
+        return (
+          <AuthComponent 
+            onAuthSuccess={handleAuthSuccess}
+            onBack={() => setCurrentPage('landing')}
+          />
+        );
+      case 'preregistration':
+        return (
+          <PreRegistrationPage
+            onBack={() => setCurrentPage('landing')}
+            onNavigateToLogin={() => setCurrentPage('login')}
+          />
+        );
+      case 'landing':
+      default:
+        return (
+          <PublicLandingPage
+            onNavigateToLogin={() => setCurrentPage('login')}
+            onNavigateToPreRegistration={() => setCurrentPage('preregistration')}
+          />
+        );
+    }
   }
 
   // Interface principale
