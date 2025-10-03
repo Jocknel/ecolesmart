@@ -6640,8 +6640,14 @@ const App = () => {
     processGoogleAuth();
   }, []);
 
-  const handleAuthSuccess = (userData, isNewRegistration = false) => {
+  const handleAuthSuccess = (userData, isNewRegistration = false, token = null) => {
     setUser(userData);
+    
+    // Stocker le token si fourni
+    if (token) {
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
     
     // Définir l'onglet initial selon le rôle
     if (userData.role === 'administrateur') {
