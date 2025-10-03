@@ -716,7 +716,7 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 6));
+      setCurrentStep(prev => Math.min(prev + 1, 5));
     }
   };
 
@@ -728,16 +728,40 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
     if (validateStep(currentStep)) {
       setLoading(true);
       try {
-        // Here you would submit to your pre-registration endpoint
-        await axios.post('/auth/pre-register', formData);
-        toast.success('Pré-inscription enregistrée avec succès! Vous recevrez une confirmation par email.');
-        onBack(); // Return to landing page
+        // Préparer les données pour l'API backend
+        const submissionData = {
+          nom_complet: `${formData.nom_eleve} ${formData.prenoms_eleve}`,
+          date_naissance: formData.date_naissance,
+          email: formData.email,
+          telephone: formData.telephone,
+          niveau_souhaite: formData.niveau_souhaite.toLowerCase(),
+          etablissement_actuel: formData.etablissement_actuel,
+          nom_parent: formData.nom_parent,
+          prenoms_parent: formData.prenoms_parent,
+          telephone_parent: formData.telephone_parent,
+          email_parent: formData.email_parent,
+          accepte_conditions: formData.accepte_conditions
+        };
+        
+        await axios.post('/auth/pre-register', submissionData);
+        toast.success('🎉 Pré-inscription enregistrée avec succès! Vous recevrez une confirmation par email dans les prochaines minutes.');
+        
+        // Rediriger vers la page d'accueil après un délai
+        setTimeout(() => {
+          onBack();
+        }, 3000);
+        
       } catch (error) {
-        toast.error('Erreur lors de la pré-inscription. Veuillez réessayer.');
+        console.error('Erreur pré-inscription:', error);
+        toast.error('❌ Erreur lors de la pré-inscription. Veuillez réessayer ou nous contacter.');
       } finally {
         setLoading(false);
       }
     }
+  };
+
+  const getProgressPercentage = () => {
+    return (currentStep / steps.length) * 100;
   };
 
   const renderStepContent = () => {
