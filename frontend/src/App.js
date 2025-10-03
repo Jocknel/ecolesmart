@@ -882,33 +882,113 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
       case 2:
         return (
           <div className="space-y-6">
+            <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+              <div className="flex items-center">
+                <div className="text-green-400 mr-3">🎓</div>
+                <div>
+                  <p className="text-green-800 font-medium">Choisissez le niveau adapté</p>
+                  <p className="text-green-600 text-sm">Les frais de scolarité varient selon le niveau sélectionné.</p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="email@exemple.com"
-                className={fieldErrors.email ? 'border-red-500' : ''}
-              />
-              {fieldErrors.email && (
-                <p className="text-sm text-red-500">{fieldErrors.email}</p>
+              <Label htmlFor="niveau_souhaite">Niveau souhaité pour 2024-2025 *</Label>
+              <Select value={formData.niveau_souhaite} onValueChange={(value) => handleInputChange('niveau_souhaite', value)}>
+                <SelectTrigger className={fieldErrors.niveau_souhaite ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Choisir le niveau d'inscription" />
+                </SelectTrigger>
+                <SelectContent>
+                  {niveauxDisponibles.map((niveau) => (
+                    <SelectItem key={niveau.value} value={niveau.value}>
+                      <div className="flex justify-between items-center w-full">
+                        <span>{niveau.label}</span>
+                        <span className="text-green-600 font-semibold ml-4">{niveau.prix} GNF/an</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.niveau_souhaite && (
+                <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.niveau_souhaite}</p>
+              )}
+              {formData.niveau_souhaite && (
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-blue-800 font-medium">
+                    💰 Frais de scolarité: {niveauxDisponibles.find(n => n.value === formData.niveau_souhaite)?.prix} GNF/an
+                  </p>
+                  <p className="text-blue-600 text-sm">Possibilité de paiement en 3 tranches</p>
+                </div>
               )}
             </div>
-            
+
+            {(formData.niveau_souhaite === '1ère' || formData.niveau_souhaite === 'Tle') && (
+              <div className="space-y-2">
+                <Label htmlFor="serie_bac">Série BAC souhaitée</Label>
+                <Select value={formData.serie_bac} onValueChange={(value) => handleInputChange('serie_bac', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir la série" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sciences">Sciences Expérimentales</SelectItem>
+                    <SelectItem value="Maths">Mathématiques</SelectItem>
+                    <SelectItem value="Lettres">Lettres Modernes</SelectItem>
+                    <SelectItem value="SES">Sciences Économiques et Sociales</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="etablissement_actuel">Établissement actuel *</Label>
+                <Input
+                  id="etablissement_actuel"
+                  value={formData.etablissement_actuel}
+                  onChange={(e) => handleInputChange('etablissement_actuel', e.target.value)}
+                  placeholder="ex: Collège Moderne de Kaloum"
+                  className={fieldErrors.etablissement_actuel ? 'border-red-500' : ''}
+                />
+                {fieldErrors.etablissement_actuel && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.etablissement_actuel}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="niveau_actuel">Niveau actuel (2023-2024)</Label>
+                <Input
+                  id="niveau_actuel"
+                  value={formData.niveau_actuel}
+                  onChange={(e) => handleInputChange('niveau_actuel', e.target.value)}
+                  placeholder="ex: 3ème"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="telephone">Téléphone *</Label>
+              <Label htmlFor="moyenne_generale">Moyenne générale actuelle (sur 20)</Label>
               <Input
-                id="telephone"
-                type="tel"
-                value={formData.telephone}
-                onChange={(e) => handleInputChange('telephone', e.target.value)}
-                placeholder="+224 6XX XXX XXX"
-                className={fieldErrors.telephone ? 'border-red-500' : ''}
+                id="moyenne_generale"
+                type="number"
+                step="0.1"
+                min="0"
+                max="20"
+                value={formData.moyenne_generale}
+                onChange={(e) => handleInputChange('moyenne_generale', e.target.value)}
+                placeholder="ex: 14.5"
+                className={fieldErrors.moyenne_generale ? 'border-red-500' : ''}
               />
-              {fieldErrors.telephone && (
-                <p className="text-sm text-red-500">{fieldErrors.telephone}</p>
+              {fieldErrors.moyenne_generale && (
+                <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.moyenne_generale}</p>
+              )}
+              {formData.moyenne_generale && (
+                <p className="text-sm text-blue-600">
+                  {parseFloat(formData.moyenne_generale) >= 16 ? '🌟 Excellent niveau!' :
+                   parseFloat(formData.moyenne_generale) >= 14 ? '✅ Très bon niveau' :
+                   parseFloat(formData.moyenne_generale) >= 12 ? '👍 Bon niveau' :
+                   parseFloat(formData.moyenne_generale) >= 10 ? '📚 Niveau satisfaisant' :
+                   '💪 Nous vous aiderons à progresser!'}
+                </p>
               )}
             </div>
           </div>
