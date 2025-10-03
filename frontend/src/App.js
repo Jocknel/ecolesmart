@@ -6642,6 +6642,14 @@ const App = () => {
 
   const handleAuthSuccess = (userData, isNewRegistration = false) => {
     setUser(userData);
+    
+    // Définir l'onglet initial selon le rôle
+    if (userData.role === 'administrateur') {
+      setActiveTab('admin-dashboard');
+    } else {
+      setActiveTab('dashboard');
+    }
+    
     // Afficher le guide de bienvenue pour les nouvelles inscriptions
     if (isNewRegistration) {
       setShowWelcomeGuide(true);
