@@ -1037,14 +1037,14 @@ const AuthComponent = ({ onAuthSuccess, onBack }) => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{isLogin ? 'Identifiant' : 'Email'}</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="votre.email@exemple.com"
+                placeholder={isLogin ? "Email, téléphone ou matricule" : "votre.email@exemple.com"}
                 required
                 data-testid="email-input"
                 className={fieldErrors.email ? 'border-red-500' : ''}
