@@ -284,7 +284,10 @@
 
 ## test_plan:
   current_focus:
-    - "Pre-registration endpoint testing completed successfully"
+    - "Public Landing Page (Lycée Sainte-Étoile)"
+    - "Navigation Between Pages"
+    - "Pre-Registration Form (5 Steps)"
+    - "Login Page with Enhanced Features"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
