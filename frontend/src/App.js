@@ -19,6 +19,538 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 // Configuration axios
 axios.defaults.baseURL = API_BASE_URL;
 
+// Composant Page d'accueil publique (Vitrine)
+const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) => {
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header Navigation */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            {/* Logo */}
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full mr-3">
+                <span className="text-white font-bold text-lg">LSE</span>
+              </div>
+              <span className="text-2xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+            </div>
+            
+            {/* Navigation Menu */}
+            <nav className="hidden md:flex space-x-8">
+              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Accueil</a>
+              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">À propos</a>
+              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Programmes</a>
+              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Actualités</a>
+              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Contact</a>
+            </nav>
+            
+            {/* Action Button */}
+            <Button 
+              variant="outline" 
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              onClick={onNavigateToLogin}
+            >
+              <span className="mr-2">→</span> Connexion
+            </Button>
+          </div>
+        </div>
+      </header>
+      
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-24">
+        <div className="max-w-4xl mx-auto text-center px-4">
+          <h1 className="text-5xl font-bold mb-6">Bienvenue au Lycée Sainte-Étoile</h1>
+          <p className="text-xl mb-12 opacity-90">
+            Excellence académique — Éducation humaine — Technologies modernes
+          </p>
+          
+          {/* CTA Buttons */}
+          <div className="flex justify-center space-x-6">
+            <Button 
+              size="lg"
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold"
+              onClick={onNavigateToPreRegistration}
+            >
+              <UserPlus className="mr-2 h-5 w-5" />
+              Pré-inscription
+            </Button>
+            <Button 
+              size="lg"
+              variant="outline"
+              className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold"
+              onClick={onNavigateToLogin}
+            >
+              <span className="mr-2">→</span>
+              Connexion
+            </Button>
+          </div>
+        </div>
+      </section>
+      
+      {/* Additional Sections can be added here */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">Notre Mission</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Le Lycée Sainte-Étoile s'engage à offrir une éducation de qualité supérieure, 
+            alliant excellence académique et formation humaine dans un environnement moderne et bienveillant.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// Composant Page de Pré-inscription avec étapes
+const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    // Étape 1: Informations Élève
+    nom_complet: '',
+    date_naissance: '',
+    
+    // Étape 2: Contacts
+    email: '',
+    telephone: '',
+    
+    // Étape 3: Scolarité
+    niveau_souhaite: '',
+    etablissement_actuel: '',
+    
+    // Étape 4: Parent/Tuteur
+    nom_parent: '',
+    prenoms_parent: '',
+    telephone_parent: '',
+    email_parent: '',
+    
+    // Étape 5: Documents
+    documents: [],
+    
+    // Étape 6: Validation
+    accepte_conditions: false
+  });
+  
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const steps = [
+    { id: 1, title: 'Informations Élève', subtitle: 'Identité de l\'élève' },
+    { id: 2, title: 'Contacts', subtitle: 'Coordonnées' },
+    { id: 3, title: 'Scolarité', subtitle: 'Parcours scolaire' },
+    { id: 4, title: 'Parent/Tuteur', subtitle: 'Contact responsable' },
+    { id: 5, title: 'Documents', subtitle: 'Pièces justificatives' },
+    { id: 6, title: 'Validation', subtitle: 'Confirmation' }
+  ];
+
+  const handleInputChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear errors on change
+    if (fieldErrors[name]) {
+      const newErrors = { ...fieldErrors };
+      delete newErrors[name];
+      setFieldErrors(newErrors);
+    }
+  };
+
+  const validateStep = (step) => {
+    const errors = {};
+    
+    switch(step) {
+      case 1:
+        if (!formData.nom_complet || formData.nom_complet.length < 3) {
+          errors.nom_complet = 'Le nom complet est requis (minimum 3 caractères)';
+        }
+        if (!formData.date_naissance) {
+          errors.date_naissance = 'La date de naissance est requise';
+        }
+        break;
+      case 2:
+        if (!formData.email || !formData.email.includes('@')) {
+          errors.email = 'Un email valide est requis';
+        }
+        if (!formData.telephone) {
+          errors.telephone = 'Le numéro de téléphone est requis';
+        }
+        break;
+      case 3:
+        if (!formData.niveau_souhaite) {
+          errors.niveau_souhaite = 'Le niveau souhaité est requis';
+        }
+        break;
+      case 4:
+        if (!formData.nom_parent) {
+          errors.nom_parent = 'Le nom du parent/tuteur est requis';
+        }
+        if (!formData.telephone_parent) {
+          errors.telephone_parent = 'Le téléphone du parent/tuteur est requis';
+        }
+        break;
+      case 6:
+        if (!formData.accepte_conditions) {
+          errors.accepte_conditions = 'Vous devez accepter les conditions';
+        }
+        break;
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 6));
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleSubmit = async () => {
+    if (validateStep(currentStep)) {
+      setLoading(true);
+      try {
+        // Here you would submit to your pre-registration endpoint
+        await axios.post('/auth/pre-register', formData);
+        toast.success('Pré-inscription enregistrée avec succès! Vous recevrez une confirmation par email.');
+        onBack(); // Return to landing page
+      } catch (error) {
+        toast.error('Erreur lors de la pré-inscription. Veuillez réessayer.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const renderStepContent = () => {
+    switch(currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="nom_complet">Nom complet *</Label>
+              <Input
+                id="nom_complet"
+                value={formData.nom_complet}
+                onChange={(e) => handleInputChange('nom_complet', e.target.value)}
+                placeholder="Nom et prénoms de l'élève"
+                className={fieldErrors.nom_complet ? 'border-red-500' : ''}
+              />
+              {fieldErrors.nom_complet && (
+                <p className="text-sm text-red-500">{fieldErrors.nom_complet}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="date_naissance">Date de naissance *</Label>
+              <Input
+                id="date_naissance"
+                type="date"
+                value={formData.date_naissance}
+                onChange={(e) => handleInputChange('date_naissance', e.target.value)}
+                className={fieldErrors.date_naissance ? 'border-red-500' : ''}
+              />
+              {fieldErrors.date_naissance && (
+                <p className="text-sm text-red-500">{fieldErrors.date_naissance}</p>
+              )}
+            </div>
+          </div>
+        );
+      
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder="email@exemple.com"
+                className={fieldErrors.email ? 'border-red-500' : ''}
+              />
+              {fieldErrors.email && (
+                <p className="text-sm text-red-500">{fieldErrors.email}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="telephone">Téléphone *</Label>
+              <Input
+                id="telephone"
+                type="tel"
+                value={formData.telephone}
+                onChange={(e) => handleInputChange('telephone', e.target.value)}
+                placeholder="+224 6XX XXX XXX"
+                className={fieldErrors.telephone ? 'border-red-500' : ''}
+              />
+              {fieldErrors.telephone && (
+                <p className="text-sm text-red-500">{fieldErrors.telephone}</p>
+              )}
+            </div>
+          </div>
+        );
+      
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="niveau_souhaite">Niveau souhaité *</Label>
+              <Select value={formData.niveau_souhaite} onValueChange={(value) => handleInputChange('niveau_souhaite', value)}>
+                <SelectTrigger className={fieldErrors.niveau_souhaite ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Choisir le niveau" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="seconde">Seconde</SelectItem>
+                  <SelectItem value="premiere">Première</SelectItem>
+                  <SelectItem value="terminale">Terminale</SelectItem>
+                </SelectContent>
+              </Select>
+              {fieldErrors.niveau_souhaite && (
+                <p className="text-sm text-red-500">{fieldErrors.niveau_souhaite}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="etablissement_actuel">Établissement actuel</Label>
+              <Input
+                id="etablissement_actuel"
+                value={formData.etablissement_actuel}
+                onChange={(e) => handleInputChange('etablissement_actuel', e.target.value)}
+                placeholder="Nom de l'établissement actuel (optionnel)"
+              />
+            </div>
+          </div>
+        );
+      
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nom_parent">Nom *</Label>
+                <Input
+                  id="nom_parent"
+                  value={formData.nom_parent}
+                  onChange={(e) => handleInputChange('nom_parent', e.target.value)}
+                  placeholder="Nom du parent/tuteur"
+                  className={fieldErrors.nom_parent ? 'border-red-500' : ''}
+                />
+                {fieldErrors.nom_parent && (
+                  <p className="text-sm text-red-500">{fieldErrors.nom_parent}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="prenoms_parent">Prénoms</Label>
+                <Input
+                  id="prenoms_parent"
+                  value={formData.prenoms_parent}
+                  onChange={(e) => handleInputChange('prenoms_parent', e.target.value)}
+                  placeholder="Prénoms du parent/tuteur"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="telephone_parent">Téléphone *</Label>
+              <Input
+                id="telephone_parent"
+                type="tel"
+                value={formData.telephone_parent}
+                onChange={(e) => handleInputChange('telephone_parent', e.target.value)}
+                placeholder="+224 6XX XXX XXX"
+                className={fieldErrors.telephone_parent ? 'border-red-500' : ''}
+              />
+              {fieldErrors.telephone_parent && (
+                <p className="text-sm text-red-500">{fieldErrors.telephone_parent}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email_parent">Email parent</Label>
+              <Input
+                id="email_parent"
+                type="email"
+                value={formData.email_parent}
+                onChange={(e) => handleInputChange('email_parent', e.target.value)}
+                placeholder="email@exemple.com (optionnel)"
+              />
+            </div>
+          </div>
+        );
+      
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Documents à fournir</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Vous devrez fournir ces documents lors de la finalisation de l'inscription :
+              </p>
+              <ul className="text-left text-sm text-gray-600 space-y-1 max-w-md mx-auto">
+                <li>• Acte de naissance de l'élève</li>
+                <li>• Bulletin scolaire de l'année précédente</li>
+                <li>• Photo d'identité récente</li>
+                <li>• Certificat médical</li>
+                <li>• Pièce d'identité du parent/tuteur</li>
+              </ul>
+            </div>
+          </div>
+        );
+      
+      case 6:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-4">Récapitulatif de votre pré-inscription</h3>
+              <div className="space-y-2 text-sm">
+                <div><strong>Élève :</strong> {formData.nom_complet}</div>
+                <div><strong>Date de naissance :</strong> {formData.date_naissance}</div>
+                <div><strong>Email :</strong> {formData.email}</div>
+                <div><strong>Téléphone :</strong> {formData.telephone}</div>
+                <div><strong>Niveau souhaité :</strong> {formData.niveau_souhaite}</div>
+                <div><strong>Parent/Tuteur :</strong> {formData.nom_parent} {formData.prenoms_parent}</div>
+                <div><strong>Téléphone parent :</strong> {formData.telephone_parent}</div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.accepte_conditions}
+                  onChange={(e) => handleInputChange('accepte_conditions', e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-gray-600">
+                  J'accepte les conditions générales et autorise le traitement de mes données personnelles 
+                  dans le cadre de cette pré-inscription *
+                </span>
+              </label>
+              {fieldErrors.accepte_conditions && (
+                <p className="text-sm text-red-500">{fieldErrors.accepte_conditions}</p>
+              )}
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-full mr-3">
+                <span className="text-white font-bold">LSE</span>
+              </div>
+              <span className="text-xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+            </div>
+            
+            <Button 
+              variant="outline"
+              onClick={onNavigateToLogin}
+            >
+              <span className="mr-2">→</span> Connexion
+            </Button>
+          </div>
+        </div>
+      </header>
+      
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-blue-800 mb-2">Pré-inscription Élève</h1>
+          <p className="text-gray-600">
+            Remplissez ce formulaire pour pré-inscrire votre enfant. 
+            Tous les champs marqués d'un astérisque (*) sont obligatoires.
+          </p>
+        </div>
+        
+        {/* Steps Progress */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center space-x-4">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold
+                  ${currentStep >= step.id 
+                    ? 'bg-green-600 text-white' 
+                    : currentStep === step.id 
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                  }`}>
+                  {step.id}
+                </div>
+                <div className="ml-2 hidden md:block">
+                  <div className={`text-xs font-medium ${currentStep >= step.id ? 'text-green-600' : 'text-gray-600'}`}>
+                    {step.title}
+                  </div>
+                  <div className="text-xs text-gray-500">{step.subtitle}</div>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className="w-8 h-0.5 bg-gray-300 ml-4"></div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Form */}
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-blue-800">
+              {steps[currentStep - 1].title}
+            </CardTitle>
+            <CardDescription>
+              Étape {currentStep} sur {steps.length} - {steps[currentStep - 1].subtitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {renderStepContent()}
+            
+            <div className="flex justify-between mt-8">
+              {currentStep > 1 ? (
+                <Button variant="outline" onClick={handlePrevious}>
+                  Précédent
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={onBack}>
+                  Retour
+                </Button>
+              )}
+              
+              {currentStep < steps.length ? (
+                <Button 
+                  onClick={handleNext}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Suivant
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleSubmit}
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={loading}
+                >
+                  {loading ? 'Envoi...' : 'Confirmer la pré-inscription'}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
 // Composant de récupération de mot de passe
 const PasswordResetComponent = ({ onBack }) => {
   const [step, setStep] = useState('request'); // 'request' ou 'confirm'
