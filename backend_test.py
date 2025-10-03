@@ -593,6 +593,7 @@ class AuthenticationTester:
         self.test_2fa_system()
         self.test_enhanced_login()
         self.test_temporary_password_change()
+        self.test_pre_registration()
         
         # Print summary
         return self.print_summary()
