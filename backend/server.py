@@ -548,6 +548,145 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     user['_id'] = str(user['_id'])
     return user
 
+# Utilitaires pour générer des données de démonstration et calculer les KPI
+import random
+from datetime import datetime, timedelta, date, timezone
+
+async def generer_donnees_demo():
+    """Génère des données de démonstration réalistes pour le dashboard administrateur."""
+    
+    # Générer des élèves fictifs
+    eleves = []
+    classes = ['CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2', '6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Tle']
+    noms_guinéens = ['DIALLO', 'BARRY', 'BAH', 'CAMARA', 'CONTE', 'SYLLA', 'SOW', 'KEITA', 'TOURE', 'BANGOURA']
+    prenoms_guinéens = ['Aminata', 'Mamadou', 'Fatoumata', 'Ibrahima', 'Mariama', 'Alpha', 'Aissatou', 'Mohamed', 'Kadiatou', 'Saliou']
+    
+    # Vérifier si les données existent déjà
+    existing_stats = await db.statistiques_eleves.count_documents({})
+    if existing_stats > 0:
+        return  # Données déjà générées
+    
+    for i in range(1247):  # 1247 élèves comme dans le KPI
+        nom = random.choice(noms_guinéens)
+        prenom = random.choice(prenoms_guinéens)
+        classe = random.choice(classes)
+        
+        eleve_stat = StatistiqueEleve(
+            eleve_id=f"eleve_{i+1}",
+            nom_complet=f"{nom} {prenom}",
+            classe=classe,
+            moyenne_generale=round(random.uniform(6.0, 19.5), 1),
+            taux_presence=round(random.uniform(75.0, 98.0), 1),
+            nombre_retards=random.randint(0, 8),
+            nombre_absences=random.randint(0, 15),
+            dernier_paiement=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 90)),
+            statut_paiement=random.choices(
+                ["a_jour", "retard", "critique"], 
+                weights=[70, 25, 5]
+            )[0]
+        )
+        eleves.append(eleve_stat.dict())
+    
+    if eleves:
+        await db.statistiques_eleves.insert_many(eleves)
+    
+    # Générer des statistiques par classe
+    stats_classes = []
+    for classe in classes:
+        eleves_classe = [e for e in eleves if e['classe'] == classe]
+        if eleves_classe:
+            effectif = len(eleves_classe)
+            moyenne_classe = round(sum(e['moyenne_generale'] or 0 for e in eleves_classe) / effectif, 1)
+            presence_classe = round(sum(e['taux_presence'] or 0 for e in eleves_classe) / effectif, 1)
+            
+            stat_classe = StatistiqueClasse(
+                classe=classe,
+                niveau=classe,
+                effectif=effectif,
+                moyenne_generale=moyenne_classe,
+                taux_presence=presence_classe,
+                enseignant_principal=f"Prof. {random.choice(['CAMARA', 'DIALLO', 'SOW'])} {random.choice(['Aminata', 'Mohamed', 'Fatoumata'])}",
+                nombre_evaluations=random.randint(8, 15)
+            )
+            stats_classes.append(stat_classe.dict())
+    
+    if stats_classes:
+        await db.statistiques_classes.insert_many(stats_classes)
+    
+    # Générer des alertes administratives
+    alertes = [
+        AlerteAdmin(
+            type="critique",
+            titre="Paiements en retard critique",
+            description="3 paiements en retard de plus de 30 jours nécessitent une action immédiate",
+            priorite=1
+        ),
+        AlerteAdmin(
+            type="attention", 
+            titre="Taux d'absence élevé",
+            description="2 classes avec un taux d'absence supérieur à 15% ce mois",
+            priorite=2
+        ),
+        AlerteAdmin(
+            type="info",
+            titre="Bulletins non saisis",
+            description="5 bulletins trimestriels en attente de saisie",
+            priorite=2
+        )
+    ]
+    
+    await db.alertes_admin.insert_many([a.dict() for a in alertes])
+    
+    # Générer des actions requises
+    actions = [
+        ActionRequise(
+            titre="Valider nouvelles inscriptions",
+            description="12 nouvelles inscriptions en attente de validation administrative",
+            type="validation",
+            echeance=datetime.now(timezone.utc) + timedelta(days=3)
+        ),
+        ActionRequise(
+            titre="Approuver demandes de congés",
+            description="8 demandes de congés enseignants à approuver pour le mois prochain",
+            type="approbation", 
+            echeance=datetime.now(timezone.utc) + timedelta(days=7)
+        )
+    ]
+    
+    await db.actions_requises.insert_many([a.dict() for a in actions])
+
+async def calculer_kpi_admin():
+    """Calcule les KPI en temps réel pour le dashboard administrateur."""
+    
+    # Effectif total
+    effectif_total = await db.statistiques_eleves.count_documents({})
+    
+    # Taux de présence global
+    pipeline_presence = [
+        {"$group": {"_id": None, "taux_moyen": {"$avg": "$taux_presence"}}}
+    ]
+    presence_result = await db.statistiques_eleves.aggregate(pipeline_presence).to_list(1)
+    taux_presence = round(presence_result[0]["taux_moyen"], 1) if presence_result else 92.3
+    
+    # Statistiques de paiements
+    total_eleves = effectif_total
+    eleves_a_jour = await db.statistiques_eleves.count_documents({"statut_paiement": "a_jour"})
+    paiements_mois = round((eleves_a_jour / total_eleves * 100), 1) if total_eleves > 0 else 87.4
+    
+    # Montant collecté ce mois (estimation)
+    paiements_montant = int(eleves_a_jour * 1.2)  # En millions GNF
+    
+    # Alertes actives
+    alertes_actives = await db.alertes_admin.count_documents({"statut": "active"})
+    
+    return KPIData(
+        effectif_total=effectif_total,
+        taux_presence=taux_presence,
+        paiements_mois=paiements_mois,
+        paiements_montant=paiements_montant,
+        alertes_actives=alertes_actives
+    )
+
 def generate_matricule(classe: str, annee: str) -> str:
     """Génère un matricule unique"""
     codes_classe = {
