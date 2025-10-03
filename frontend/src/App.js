@@ -2342,7 +2342,15 @@ const AuthComponent = ({ onAuthSuccess, onBack }) => {
 
 // Composant Sidebar
 const Sidebar = ({ activeTab, setActiveTab, user, onLogout }) => {
-  const menuItems = [
+  const menuItems = [];
+
+  // Dashboard spécial pour les administrateurs
+  if (user.role === 'administrateur') {
+    menuItems.push({ id: 'admin-dashboard', label: 'Dashboard Admin', icon: BarChart3 });
+  }
+  
+  // Menu communs
+  menuItems.push(
     { id: 'dashboard', label: 'Tableau de bord', icon: BookOpen },
     { id: 'eleves', label: 'Élèves', icon: Users },
     { id: 'notes', label: 'Notes & Moyennes', icon: BookOpen },
@@ -2353,9 +2361,9 @@ const Sidebar = ({ activeTab, setActiveTab, user, onLogout }) => {
     { id: 'factures', label: 'Factures', icon: FileText },
     { id: 'paiements', label: 'Paiements', icon: CreditCard },
     { id: 'presences', label: 'Présences', icon: ClipboardCheck }
-  ];
+  );
 
-  // Ajouter l'item admin seulement pour les administrateurs
+  // Ajouter l'item admin pour les autres fonctions admin
   if (user.role === 'administrateur') {
     menuItems.push({ id: 'admin', label: 'Administration', icon: AlertCircle });
   }
