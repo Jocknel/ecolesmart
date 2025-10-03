@@ -625,6 +625,51 @@ async def register_user(user_data: UserCreate):
         "user": user_response
     }
 
+@api_router.post("/auth/pre-register")
+async def pre_register_student(pre_registration: PreRegistrationRequest):
+    """Pré-inscription d'un élève"""
+    try:
+        # Vérifier si l'email n'est pas déjà utilisé
+        existing_email = await db.pre_registrations.find_one({"email": pre_registration.email})
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Une pré-inscription avec cet email existe déjà"
+            )
+        
+        # Créer l'entrée de pré-inscription avec un ID unique
+        pre_registration_data = pre_registration.dict()
+        pre_registration_data.update({
+            "id": str(uuid.uuid4()),
+            "date_creation": datetime.now(timezone.utc),
+            "statut": "en_attente",  # en_attente, approuve, refuse
+            "notes_admin": "",
+            "traite_par": None,
+            "date_traitement": None
+        })
+        
+        # Sauvegarder dans la collection pre_registrations
+        result = await db.pre_registrations.insert_one(pre_registration_data)
+        
+        # TODO: Envoyer un email de confirmation avec les détails de la pré-inscription
+        # En production, vous devriez envoyer un email ici avec SendGrid
+        
+        return {
+            "success": True,
+            "message": "Pré-inscription enregistrée avec succès",
+            "pre_registration_id": pre_registration_data["id"],
+            "details": "Vous recevrez une confirmation par email. L'administration examinera votre demande sous 48h."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur pré-inscription: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de l'enregistrement de la pré-inscription"
+        )
+
 @api_router.post("/auth/login", response_model=Token)
 async def login_user(user_credentials: UserLogin):
     """Connexion d'un utilisateur avec support 2FA"""
