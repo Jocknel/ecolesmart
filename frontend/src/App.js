@@ -19,35 +19,60 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 // Configuration axios
 axios.defaults.baseURL = API_BASE_URL;
 
-// Composant Page d'accueil publique (Vitrine)
+// Composant Page d'accueil publique complète et moderne
 const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) => {
+  const [activeSection, setActiveSection] = useState('accueil');
+
+  const scrollToSection = (sectionId) => {
+    setActiveSection(sectionId);
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header Navigation */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             {/* Logo */}
-            <div className="flex items-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full mr-3">
+            <div className="flex items-center cursor-pointer" onClick={() => scrollToSection('accueil')}>
+              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mr-3 shadow-lg">
                 <span className="text-white font-bold text-lg">LSE</span>
               </div>
-              <span className="text-2xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+              <div>
+                <span className="text-2xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+                <p className="text-xs text-gray-600">Excellence • Innovation • Réussite</p>
+              </div>
             </div>
             
             {/* Navigation Menu */}
             <nav className="hidden md:flex space-x-8">
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Accueil</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">À propos</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Programmes</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Actualités</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Contact</a>
+              {[
+                { id: 'accueil', label: 'Accueil' },
+                { id: 'apropos', label: 'À propos' },
+                { id: 'programmes', label: 'Programmes' },
+                { id: 'actualites', label: 'Actualités' },
+                { id: 'contact', label: 'Contact' }
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 pb-1 border-b-2 ${
+                    activeSection === item.id ? 'border-blue-600 text-blue-600' : 'border-transparent'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </nav>
             
             {/* Action Button */}
             <Button 
               variant="outline" 
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200"
               onClick={onNavigateToLogin}
             >
               <span className="mr-2">→</span> Connexion
@@ -55,48 +80,431 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
           </div>
         </div>
       </header>
-      
+
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-24">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <h1 className="text-5xl font-bold mb-6">Bienvenue au Lycée Sainte-Étoile</h1>
-          <p className="text-xl mb-12 opacity-90">
-            Excellence académique — Éducation humaine — Technologies modernes
-          </p>
-          
-          {/* CTA Buttons */}
-          <div className="flex justify-center space-x-6">
-            <Button 
-              size="lg"
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold"
-              onClick={onNavigateToPreRegistration}
-            >
-              <UserPlus className="mr-2 h-5 w-5" />
-              Pré-inscription
-            </Button>
-            <Button 
-              size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold"
-              onClick={onNavigateToLogin}
-            >
-              <span className="mr-2">→</span>
-              Connexion
-            </Button>
+      <section id="accueil" className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="flex items-center mb-6">
+                <div className="w-1 h-16 bg-gradient-to-b from-green-400 to-blue-400 mr-4"></div>
+                <div>
+                  <h1 className="text-5xl lg:text-6xl font-bold mb-4">
+                    Bienvenue au<br />
+                    <span className="bg-gradient-to-r from-green-400 to-blue-300 bg-clip-text text-transparent">
+                      Lycée Sainte-Étoile
+                    </span>
+                  </h1>
+                </div>
+              </div>
+              
+              <p className="text-xl mb-8 text-blue-100 leading-relaxed">
+                Excellence académique • Éducation humaine • Technologies modernes
+              </p>
+              
+              <div className="grid sm:grid-cols-3 gap-6 mb-12">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-400">15+</div>
+                  <div className="text-sm text-blue-200">Années d'expérience</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-400">1200+</div>
+                  <div className="text-sm text-blue-200">Élèves formés</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-400">95%</div>
+                  <div className="text-sm text-blue-200">Taux de réussite</div>
+                </div>
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-4 text-lg font-semibold shadow-lg transition-all duration-300 transform hover:scale-105"
+                  onClick={onNavigateToPreRegistration}
+                >
+                  <UserPlus className="mr-2 h-5 w-5" />
+                  Pré-inscription 2024-2025
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold transition-all duration-300"
+                  onClick={onNavigateToLogin}
+                >
+                  <span className="mr-2">→</span>
+                  Espace Personnel
+                </Button>
+              </div>
+            </div>
+
+            <div className="hidden lg:block">
+              <div className="relative">
+                <div className="w-96 h-96 bg-gradient-to-br from-white/10 to-white/5 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <School className="w-48 h-48 text-white/80" />
+                </div>
+                <div className="absolute -top-8 -right-8 w-24 h-24 bg-green-400/20 rounded-full"></div>
+                <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-blue-400/20 rounded-full"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-      
-      {/* Additional Sections can be added here */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Notre Mission</h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Le Lycée Sainte-Étoile s'engage à offrir une éducation de qualité supérieure, 
-            alliant excellence académique et formation humaine dans un environnement moderne et bienveillant.
-          </p>
+
+      {/* À Propos Section */}
+      <section id="apropos" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">À Propos du Lycée Sainte-Étoile</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Un établissement d'excellence qui forme les leaders de demain avec des valeurs solides et une éducation de qualité internationale.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Excellence Académique</h3>
+              <p className="text-gray-600">
+                Programmes rigoureux conformes aux standards internationaux avec un suivi personnalisé de chaque élève pour garantir leur réussite.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Users className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Éducation Humaine</h3>
+              <p className="text-gray-600">
+                Formation complète incluant les valeurs morales, le respect, la solidarité et la préparation à la citoyenneté responsable.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Shield className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Technologies Modernes</h3>
+              <p className="text-gray-600">
+                Équipements modernes, salles informatiques, laboratoires scientifiques et plateforme numérique pour un apprentissage du 21ème siècle.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
+
+      {/* Programmes Section */}
+      <section id="programmes" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Nos Programmes Éducatifs</h2>
+            <p className="text-xl text-gray-600">
+              Un parcours complet de l'enseignement primaire au baccalauréat
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="hover:shadow-xl transition-shadow duration-300">
+              <CardContent className="p-8">
+                <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
+                  <BookOpen className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Enseignement Primaire</h3>
+                <p className="text-gray-600 mb-4">
+                  CP1, CP2, CE1, CE2, CM1, CM2 - Fondements solides avec méthodes pédagogiques modernes.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">Français</Badge>
+                  <Badge variant="secondary">Mathématiques</Badge>
+                  <Badge variant="secondary">Sciences</Badge>
+                  <Badge variant="secondary">Anglais</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-xl transition-shadow duration-300">
+              <CardContent className="p-8">
+                <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mb-6">
+                  <Users className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Collège</h3>
+                <p className="text-gray-600 mb-4">
+                  6ème, 5ème, 4ème, 3ème - Préparation au BEPC avec accompagnement personnalisé.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">Sciences Physiques</Badge>
+                  <Badge variant="secondary">Histoire-Géo</Badge>
+                  <Badge variant="secondary">SVT</Badge>
+                  <Badge variant="secondary">Informatique</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-xl transition-shadow duration-300">
+              <CardContent className="p-8">
+                <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center mb-6">
+                  <School className="w-8 h-8 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Lycée</h3>
+                <p className="text-gray-600 mb-4">
+                  2nde, 1ère, Terminale - Spécialisations scientifiques et littéraires pour le Baccalauréat.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">Sciences</Badge>
+                  <Badge variant="secondary">Littéraire</Badge>
+                  <Badge variant="secondary">Philosophie</Badge>
+                  <Badge variant="secondary">Économie</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Actualités Section */}
+      <section id="actualites" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Actualités & Événements</h2>
+            <p className="text-xl text-gray-600">
+              Restez informés de la vie de notre établissement
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
+              <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <Calendar className="w-16 h-16 text-white" />
+              </div>
+              <CardContent className="p-6">
+                <div className="text-sm text-blue-600 font-semibold mb-2">15 Septembre 2024</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Rentrée Scolaire 2024-2025</h3>
+                <p className="text-gray-600">
+                  Cérémonie d'ouverture officielle de l'année scolaire avec présentation des nouveaux programmes et infrastructures.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
+              <div className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                <Users className="w-16 h-16 text-white" />
+              </div>
+              <CardContent className="p-6">
+                <div className="text-sm text-green-600 font-semibold mb-2">22 Octobre 2024</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Journée Portes Ouvertes</h3>
+                <p className="text-gray-600">
+                  Venez découvrir nos installations, rencontrer nos enseignants et échanger avec nos élèves ambassadeurs.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
+              <div className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                <BookOpen className="w-16 h-16 text-white" />
+              </div>
+              <CardContent className="p-6">
+                <div className="text-sm text-purple-600 font-semibold mb-2">5 Novembre 2024</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Concours d'Excellence</h3>
+                <p className="text-gray-600">
+                  Compétition académique inter-classes pour récompenser les meilleurs élèves dans toutes les matières.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-20 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Contactez-Nous</h2>
+            <p className="text-xl text-blue-100">
+              Nous sommes là pour répondre à toutes vos questions
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12">
+            <div>
+              <h3 className="text-2xl font-bold mb-8">Informations de Contact</h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-start">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                    <span className="text-white font-bold">📍</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Adresse</h4>
+                    <p className="text-blue-100">
+                      Avenue de la République, Quartier Kaloum<br />
+                      Conakry, République de Guinée
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                    <span className="text-white font-bold">📞</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Téléphone</h4>
+                    <p className="text-blue-100">
+                      +224 664 123 456<br />
+                      +224 622 987 654
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                    <span className="text-white font-bold">✉️</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Email</h4>
+                    <p className="text-blue-100">
+                      contact@lycee-sainte-etoile.gn<br />
+                      direction@lycee-sainte-etoile.gn
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                    <span className="text-white font-bold">🕒</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">Heures d'ouverture</h4>
+                    <p className="text-blue-100">
+                      Lundi - Vendredi: 7h30 - 17h30<br />
+                      Samedi: 8h00 - 12h00
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-white mb-6">Demande d'Information</h3>
+                  <form className="space-y-4">
+                    <div>
+                      <Input 
+                        placeholder="Votre nom complet" 
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/70"
+                      />
+                    </div>
+                    <div>
+                      <Input 
+                        type="email" 
+                        placeholder="Votre email" 
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/70"
+                      />
+                    </div>
+                    <div>
+                      <Input 
+                        placeholder="Téléphone" 
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/70"
+                      />
+                    </div>
+                    <div>
+                      <Select>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue placeholder="Sujet de votre demande" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inscription">Inscription</SelectItem>
+                          <SelectItem value="programme">Programmes</SelectItem>
+                          <SelectItem value="visite">Visite de l'école</SelectItem>
+                          <SelectItem value="autre">Autre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <textarea 
+                        placeholder="Votre message" 
+                        rows="4" 
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder:text-white/70 resize-none"
+                      ></textarea>
+                    </div>
+                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3">
+                      Envoyer le Message
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center mb-4">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mr-3">
+                  <span className="text-white font-bold">LSE</span>
+                </div>
+                <span className="text-xl font-bold">Lycée Sainte-Étoile</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                Formant les leaders de demain avec excellence et humanité depuis 2009.
+              </p>
+              <div className="flex space-x-4">
+                <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors">
+                  <span className="text-xs">📘</span>
+                </div>
+                <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors">
+                  <span className="text-xs">📱</span>
+                </div>
+                <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors">
+                  <span className="text-xs">📧</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Liens Rapides</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><button onClick={() => scrollToSection('apropos')} className="hover:text-white transition-colors">À Propos</button></li>
+                <li><button onClick={() => scrollToSection('programmes')} className="hover:text-white transition-colors">Programmes</button></li>
+                <li><button onClick={onNavigateToPreRegistration} className="hover:text-white transition-colors">Pré-inscription</button></li>
+                <li><button onClick={onNavigateToLogin} className="hover:text-white transition-colors">Connexion</button></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Services</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Suivi Scolaire</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Bulletins en Ligne</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Paiements</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Support Parents</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Contact</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li>📍 Kaloum, Conakry</li>
+                <li>📞 +224 664 123 456</li>
+                <li>✉️ contact@lycee-sainte-etoile.gn</li>
+                <li>🕒 Lun-Ven: 7h30-17h30</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
+            <p>&copy; 2024 Lycée Sainte-Étoile. Tous droits réservés. | Développé avec ❤️ pour l'éducation guinéenne</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
