@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Users, FileText, CreditCard, Calendar, UserPlus, Plus, Eye, Check, X, School, BookOpen, DollarSign, ClipboardCheck, Key, Shield, Upload, Download, Link } from 'lucide-react';
+import { AlertCircle, Users, FileText, CreditCard, Calendar, UserPlus, Plus, Eye, EyeOff, Check, X, School, BookOpen, DollarSign, ClipboardCheck, Key, Shield, Upload, Download, Link } from 'lucide-react';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL + '/api';
