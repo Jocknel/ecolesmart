@@ -1945,7 +1945,7 @@ const AuthComponent = ({ onAuthSuccess, onBack }) => {
         
         // Redirection avec un petit délai pour que l'utilisateur voie le message
         setTimeout(() => {
-          onAuthSuccess(response.data.user, !isLogin);
+          onAuthSuccess(response.data.user, !isLogin, response.data.access_token);
         }, 1000);
       }
     } catch (error) {
