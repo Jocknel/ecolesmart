@@ -1018,16 +1018,20 @@ const AuthComponent = ({ onAuthSuccess, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-800 p-4">
+      <Card className="w-full max-w-md bg-white rounded-lg shadow-xl">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
-            <School className="h-8 w-8 text-blue-600 mr-2" />
-            <h1 className="text-2xl font-bold text-blue-800">École Smart</h1>
+            <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full mr-3">
+              <span className="text-white font-bold text-lg">LSE</span>
+            </div>
+            <h1 className="text-2xl font-bold text-blue-800">Lycée Sainte-Étoile</h1>
           </div>
-          <CardTitle>{isLogin ? 'Connexion' : 'Inscription'}</CardTitle>
-          <CardDescription>
-            Plateforme de gestion scolaire pour la Guinée
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            {isLogin ? 'Connexion à la plateforme scolaire' : 'Inscription'}
+          </CardTitle>
+          <CardDescription className="text-gray-600 mt-2">
+            {isLogin ? 'Accédez à votre espace personnel' : 'Créer votre compte'}
           </CardDescription>
         </CardHeader>
         <CardContent>
