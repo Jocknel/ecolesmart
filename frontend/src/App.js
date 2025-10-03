@@ -691,12 +691,14 @@ const PasswordResetComponent = ({ onBack }) => {
   );
 };
 
-// Composant d'authentification
-const AuthComponent = ({ onAuthSuccess }) => {
+// Composant d'authentification modal
+const AuthComponent = ({ onAuthSuccess, onBack }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [needs2FA, setNeeds2FA] = useState(false);
   const [code2FA, setCode2FA] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     mot_de_passe: '',
