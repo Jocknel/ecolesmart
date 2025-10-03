@@ -1204,12 +1204,35 @@ const AuthComponent = ({ onAuthSuccess, onBack }) => {
               </>
             )}
 
+            {isLogin && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-600">Se souvenir de moi</span>
+                </label>
+                
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordReset(true)}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Mot de passe oublié ?
+                </button>
+              </div>
+            )}
+
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700" 
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3" 
               disabled={loading}
               data-testid="auth-submit-btn"
             >
+              <span className="mr-2">→</span>
               {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'S\'inscrire')}
             </Button>
 
