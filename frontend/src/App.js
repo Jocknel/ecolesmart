@@ -1065,21 +1065,25 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-full mr-3">
-                <span className="text-white font-bold">LSE</span>
+            <div className="flex items-center cursor-pointer" onClick={onBack}>
+              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mr-3 shadow-lg">
+                <span className="text-white font-bold text-lg">LSE</span>
               </div>
-              <span className="text-xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+              <div>
+                <span className="text-2xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+                <p className="text-xs text-gray-600">Pré-inscription en ligne</p>
+              </div>
             </div>
             
             <Button 
               variant="outline"
               onClick={onNavigateToLogin}
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
             >
               <span className="mr-2">→</span> Connexion
             </Button>
@@ -1088,37 +1092,61 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
       </header>
       
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-800 mb-2">Pré-inscription Élève</h1>
-          <p className="text-gray-600">
-            Remplissez ce formulaire pour pré-inscrire votre enfant. 
-            Tous les champs marqués d'un astérisque (*) sont obligatoires.
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center bg-blue-100 px-4 py-2 rounded-full mb-4">
+            <span className="text-blue-600 font-medium">Année scolaire 2024-2025</span>
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Pré-inscription 
+            <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent"> Élève</span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Rejoignez notre communauté éducative d'excellence. Complétez ce formulaire pour démarrer le processus d'inscription de votre enfant.
           </p>
         </div>
         
-        {/* Steps Progress */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4">
+        {/* Progress Bar */}
+        <div className="mb-12">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm font-medium text-gray-600">Progression</span>
+            <span className="text-sm font-medium text-blue-600">{Math.round(getProgressPercentage())}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500 ease-in-out"
+              style={{ width: `${getProgressPercentage()}%` }}
+            ></div>
+          </div>
+        </div>
+        
+        {/* Steps */}
+        <div className="flex justify-center mb-12 overflow-x-auto">
+          <div className="flex items-center space-x-2 md:space-x-6 min-w-max">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold
-                  ${currentStep >= step.id 
-                    ? 'bg-green-600 text-white' 
-                    : currentStep === step.id 
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-300 text-gray-600'
+                <div className="text-center">
+                  <div className={`flex items-center justify-center w-14 h-14 rounded-full text-lg font-bold transition-all duration-300 ${
+                    currentStep > step.id 
+                      ? 'bg-green-500 text-white shadow-lg transform scale-105' 
+                      : currentStep === step.id 
+                        ? 'bg-blue-600 text-white shadow-lg transform scale-110 ring-4 ring-blue-200'
+                        : 'bg-gray-200 text-gray-500'
                   }`}>
-                  {step.id}
-                </div>
-                <div className="ml-2 hidden md:block">
-                  <div className={`text-xs font-medium ${currentStep >= step.id ? 'text-green-600' : 'text-gray-600'}`}>
-                    {step.title}
+                    {currentStep > step.id ? '✓' : step.icon || step.id}
                   </div>
-                  <div className="text-xs text-gray-500">{step.subtitle}</div>
+                  <div className="mt-2 hidden md:block max-w-32">
+                    <div className={`text-sm font-medium ${currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'}`}>
+                      {step.title}
+                    </div>
+                    <div className="text-xs text-gray-500">{step.subtitle}</div>
+                  </div>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className="w-8 h-0.5 bg-gray-300 ml-4"></div>
+                  <div className={`hidden md:block w-12 h-1 mx-4 rounded-full transition-colors duration-300 ${
+                    currentStep > step.id ? 'bg-green-300' : 'bg-gray-200'
+                  }`}></div>
                 )}
               </div>
             ))}
@@ -1126,43 +1154,70 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
         </div>
         
         {/* Form */}
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-blue-800">
-              {steps[currentStep - 1].title}
-            </CardTitle>
-            <CardDescription>
-              Étape {currentStep} sur {steps.length} - {steps[currentStep - 1].subtitle}
-            </CardDescription>
+        <Card className="max-w-4xl mx-auto shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl text-gray-900 flex items-center">
+                  <span className="mr-3 text-3xl">{steps[currentStep - 1].icon}</span>
+                  {steps[currentStep - 1].title}
+                </CardTitle>
+                <CardDescription className="text-gray-600 mt-2 text-lg">
+                  {steps[currentStep - 1].description}
+                </CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">Étape</div>
+                <div className="text-2xl font-bold text-blue-600">{currentStep}/{steps.length}</div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {renderStepContent()}
             
-            <div className="flex justify-between mt-8">
+            <div className="flex justify-between items-center mt-12 pt-8 border-t">
               {currentStep > 1 ? (
-                <Button variant="outline" onClick={handlePrevious}>
-                  Précédent
+                <Button 
+                  variant="outline" 
+                  onClick={handlePrevious}
+                  className="px-8 py-3 text-lg"
+                >
+                  ← Précédent
                 </Button>
               ) : (
-                <Button variant="outline" onClick={onBack}>
-                  Retour
+                <Button 
+                  variant="outline" 
+                  onClick={onBack}
+                  className="px-8 py-3 text-lg"
+                >
+                  ← Retour à l'accueil
                 </Button>
               )}
               
               {currentStep < steps.length ? (
                 <Button 
                   onClick={handleNext}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-8 py-3 text-lg font-semibold shadow-lg"
                 >
-                  Suivant
+                  Suivant →
                 </Button>
               ) : (
                 <Button 
                   onClick={handleSubmit}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8 py-3 text-lg font-semibold shadow-lg"
                   disabled={loading}
                 >
-                  {loading ? 'Envoi...' : 'Confirmer la pré-inscription'}
+                  {loading ? (
+                    <>
+                      <span className="mr-2">⏳</span>
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">🎯</span>
+                      Confirmer la pré-inscription
+                    </>
+                  )}
                 </Button>
               )}
             </div>
