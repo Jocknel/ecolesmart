@@ -997,31 +997,99 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
       case 3:
         return (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="niveau_souhaite">Niveau souhaité *</Label>
-              <Select value={formData.niveau_souhaite} onValueChange={(value) => handleInputChange('niveau_souhaite', value)}>
-                <SelectTrigger className={fieldErrors.niveau_souhaite ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Choisir le niveau" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="seconde">Seconde</SelectItem>
-                  <SelectItem value="premiere">Première</SelectItem>
-                  <SelectItem value="terminale">Terminale</SelectItem>
-                </SelectContent>
-              </Select>
-              {fieldErrors.niveau_souhaite && (
-                <p className="text-sm text-red-500">{fieldErrors.niveau_souhaite}</p>
-              )}
+            <div className="bg-purple-50 border-l-4 border-purple-400 p-4 mb-6">
+              <div className="flex items-center">
+                <div className="text-purple-400 mr-3">👨‍👩‍👧‍👦</div>
+                <div>
+                  <p className="text-purple-800 font-medium">Responsable légal</p>
+                  <p className="text-purple-600 text-sm">Ces informations sont essentielles pour la communication et les urgences.</p>
+                </div>
+              </div>
             </div>
-            
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="nom_parent">Nom du parent/tuteur *</Label>
+                <Input
+                  id="nom_parent"
+                  value={formData.nom_parent}
+                  onChange={(e) => handleInputChange('nom_parent', e.target.value)}
+                  placeholder="ex: BARRY"
+                  className={fieldErrors.nom_parent ? 'border-red-500' : ''}
+                />
+                {fieldErrors.nom_parent && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.nom_parent}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prenoms_parent">Prénoms du parent/tuteur *</Label>
+                <Input
+                  id="prenoms_parent"
+                  value={formData.prenoms_parent}
+                  onChange={(e) => handleInputChange('prenoms_parent', e.target.value)}
+                  placeholder="ex: Mamadou Alpha"
+                  className={fieldErrors.prenoms_parent ? 'border-red-500' : ''}
+                />
+                {fieldErrors.prenoms_parent && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.prenoms_parent}</p>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="etablissement_actuel">Établissement actuel</Label>
+              <Label htmlFor="profession_parent">Profession</Label>
               <Input
-                id="etablissement_actuel"
-                value={formData.etablissement_actuel}
-                onChange={(e) => handleInputChange('etablissement_actuel', e.target.value)}
-                placeholder="Nom de l'établissement actuel (optionnel)"
+                id="profession_parent"
+                value={formData.profession_parent}
+                onChange={(e) => handleInputChange('profession_parent', e.target.value)}
+                placeholder="ex: Médecin, Enseignant, Commerçant, etc."
               />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="telephone_parent">Téléphone principal *</Label>
+                <Input
+                  id="telephone_parent"
+                  type="tel"
+                  value={formData.telephone_parent}
+                  onChange={(e) => handleInputChange('telephone_parent', e.target.value)}
+                  placeholder="+224 6XX XXX XXX"
+                  className={fieldErrors.telephone_parent ? 'border-red-500' : ''}
+                />
+                {fieldErrors.telephone_parent && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.telephone_parent}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email_parent">Email du parent</Label>
+                <Input
+                  id="email_parent"
+                  type="email"
+                  value={formData.email_parent}
+                  onChange={(e) => handleInputChange('email_parent', e.target.value)}
+                  placeholder="email@exemple.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="adresse_parent">Adresse complète *</Label>
+              <textarea
+                id="adresse_parent"
+                value={formData.adresse_parent}
+                onChange={(e) => handleInputChange('adresse_parent', e.target.value)}
+                placeholder="Quartier, commune, préfecture... (adresse complète pour les correspondances)"
+                rows="3"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  fieldErrors.adresse_parent ? 'border-red-500' : 'border-gray-300'
+                }`}
+              ></textarea>
+              {fieldErrors.adresse_parent && (
+                <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.adresse_parent}</p>
+              )}
             </div>
           </div>
         );
