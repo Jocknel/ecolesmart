@@ -366,6 +366,41 @@ class ChangeTemporaryPasswordRequest(BaseModel):
             raise ValueError('Les mots de passe ne correspondent pas')
         return v
 
+class PreRegistrationRequest(BaseModel):
+    # Étape 1: Informations Élève
+    nom_complet: str = Field(min_length=3, max_length=200)
+    date_naissance: str  # Format YYYY-MM-DD
+    
+    # Étape 2: Contacts
+    email: EmailStr
+    telephone: str = Field(min_length=8)
+    
+    # Étape 3: Scolarité
+    niveau_souhaite: str
+    etablissement_actuel: Optional[str] = None
+    
+    # Étape 4: Parent/Tuteur
+    nom_parent: str = Field(min_length=2, max_length=100)
+    prenoms_parent: Optional[str] = None
+    telephone_parent: str = Field(min_length=8)
+    email_parent: Optional[EmailStr] = None
+    
+    # Étape 6: Validation
+    accepte_conditions: bool = Field(default=False)
+    
+    @validator('accepte_conditions')
+    def validate_conditions(cls, v):
+        if not v:
+            raise ValueError('Vous devez accepter les conditions générales')
+        return v
+    
+    @validator('niveau_souhaite')
+    def validate_niveau(cls, v):
+        niveaux_valides = ['seconde', 'premiere', 'terminale']
+        if v not in niveaux_valides:
+            raise ValueError(f'Niveau doit être l\'un de: {", ".join(niveaux_valides)}')
+        return v
+
 # Utilitaires d'authentification
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
