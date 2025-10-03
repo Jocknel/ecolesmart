@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Test the new showcase page and pre-registration system for Lycée Sainte-Étoile that I created. Test public landing page, navigation, 5-step pre-registration form, login page, and all interactive features."
+## user_problem_statement: "Tester les nouveaux endpoints du dashboard administrateur que j'ai ajoutés au backend. Endpoints à tester: POST /api/admin/generer-donnees-demo, GET /api/admin/kpi, GET /api/admin/dashboard?periode=mois. Vérifier génération de 1247 élèves avec noms guinéens, calcul KPI temps réel, structure DashboardAdminResponse complète, authentification admin (admin@ecole-smart.gn / Admin2024!), cohérence des données."
 
 ## backend:
   - task: "Basic Authentication System"
