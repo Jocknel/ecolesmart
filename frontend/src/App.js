@@ -769,31 +769,111 @@ const PreRegistrationPage = ({ onBack, onNavigateToLogin }) => {
       case 1:
         return (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="nom_complet">Nom complet *</Label>
-              <Input
-                id="nom_complet"
-                value={formData.nom_complet}
-                onChange={(e) => handleInputChange('nom_complet', e.target.value)}
-                placeholder="Nom et prénoms de l'élève"
-                className={fieldErrors.nom_complet ? 'border-red-500' : ''}
-              />
-              {fieldErrors.nom_complet && (
-                <p className="text-sm text-red-500">{fieldErrors.nom_complet}</p>
-              )}
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+              <div className="flex items-center">
+                <div className="text-blue-400 mr-3">ℹ️</div>
+                <div>
+                  <p className="text-blue-800 font-medium">Informations importantes</p>
+                  <p className="text-blue-600 text-sm">Assurez-vous que toutes les informations sont exactes selon les documents officiels.</p>
+                </div>
+              </div>
             </div>
-            
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="nom_eleve">Nom de famille *</Label>
+                <Input
+                  id="nom_eleve"
+                  value={formData.nom_eleve}
+                  onChange={(e) => handleInputChange('nom_eleve', e.target.value)}
+                  placeholder="ex: DIALLO"
+                  className={fieldErrors.nom_eleve ? 'border-red-500' : ''}
+                />
+                {fieldErrors.nom_eleve && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.nom_eleve}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="prenoms_eleve">Prénoms *</Label>
+                <Input
+                  id="prenoms_eleve"
+                  value={formData.prenoms_eleve}
+                  onChange={(e) => handleInputChange('prenoms_eleve', e.target.value)}
+                  placeholder="ex: Aminata Mariama"
+                  className={fieldErrors.prenoms_eleve ? 'border-red-500' : ''}
+                />
+                {fieldErrors.prenoms_eleve && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.prenoms_eleve}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="date_naissance">Date de naissance *</Label>
+                <Input
+                  id="date_naissance"
+                  type="date"
+                  value={formData.date_naissance}
+                  onChange={(e) => handleInputChange('date_naissance', e.target.value)}
+                  className={fieldErrors.date_naissance ? 'border-red-500' : ''}
+                />
+                {formData.date_naissance && (
+                  <p className="text-sm text-green-600">
+                    ✅ Âge: {calculateAge(formData.date_naissance)} ans
+                  </p>
+                )}
+                {fieldErrors.date_naissance && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.date_naissance}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="sexe">Sexe *</Label>
+                <Select value={formData.sexe} onValueChange={(value) => handleInputChange('sexe', value)}>
+                  <SelectTrigger className={fieldErrors.sexe ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="M">Masculin</SelectItem>
+                    <SelectItem value="F">Féminin</SelectItem>
+                  </SelectContent>
+                </Select>
+                {fieldErrors.sexe && (
+                  <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.sexe}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nationalite">Nationalité</Label>
+                <Select value={formData.nationalite} onValueChange={(value) => handleInputChange('nationalite', value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Guinéenne">Guinéenne</SelectItem>
+                    <SelectItem value="Sénégalaise">Sénégalaise</SelectItem>
+                    <SelectItem value="Malienne">Malienne</SelectItem>
+                    <SelectItem value="Ivoirienne">Ivoirienne</SelectItem>
+                    <SelectItem value="Française">Française</SelectItem>
+                    <SelectItem value="Autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="date_naissance">Date de naissance *</Label>
+              <Label htmlFor="lieu_naissance">Lieu de naissance *</Label>
               <Input
-                id="date_naissance"
-                type="date"
-                value={formData.date_naissance}
-                onChange={(e) => handleInputChange('date_naissance', e.target.value)}
-                className={fieldErrors.date_naissance ? 'border-red-500' : ''}
+                id="lieu_naissance"
+                value={formData.lieu_naissance}
+                onChange={(e) => handleInputChange('lieu_naissance', e.target.value)}
+                placeholder="ex: Conakry, Guinée"
+                className={fieldErrors.lieu_naissance ? 'border-red-500' : ''}
               />
-              {fieldErrors.date_naissance && (
-                <p className="text-sm text-red-500">{fieldErrors.date_naissance}</p>
+              {fieldErrors.lieu_naissance && (
+                <p className="text-sm text-red-500 flex items-center"><span className="mr-1">⚠️</span>{fieldErrors.lieu_naissance}</p>
               )}
             </div>
           </div>
