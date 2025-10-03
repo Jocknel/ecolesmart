@@ -550,7 +550,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 # Utilitaires pour générer des données de démonstration et calculer les KPI
 import random
-from datetime import datetime, timedelta, date, timezone
 
 async def generer_donnees_demo():
     """Génère des données de démonstration réalistes pour le dashboard administrateur."""
