@@ -36,7 +36,7 @@ const AdminDashboard = ({ user }) => {
       setLoading(true);
       const response = await axios.get(`/admin/dashboard?periode=${periode}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       setDashboardData(response.data);
