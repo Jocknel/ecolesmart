@@ -6707,7 +6707,8 @@ const App = () => {
       />
       
       <div className="flex-1 overflow-hidden">
-        <main className="p-8">
+        <main className={activeTab === 'admin-dashboard' ? 'p-0' : 'p-8'}>
+          {activeTab === 'admin-dashboard' && user.role === 'administrateur' && <AdminDashboard user={user} />}
           {activeTab === 'dashboard' && <Dashboard user={user} />}
           {activeTab === 'eleves' && <ElevesComponent user={user} />}
           {activeTab === 'notes' && <NotesComponent user={user} />}
