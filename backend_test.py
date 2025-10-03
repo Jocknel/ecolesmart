@@ -385,6 +385,161 @@ class AuthenticationTester:
         except Exception as e:
             self.log_result("temp_password", "Temporary password change", False, str(e))
     
+    def test_pre_registration(self):
+        """Test pre-registration endpoint functionality"""
+        print("\n📝 Testing Pre-Registration System...")
+        
+        # Test 1: Success with valid data
+        try:
+            valid_data = {
+                "nom_complet": "Diallo Aminata",
+                "date_naissance": "2008-05-15",
+                "email": "aminata.diallo@example.com",
+                "telephone": "+224 628 123 456",
+                "niveau_souhaite": "seconde",
+                "etablissement_actuel": "Collège de Conakry",
+                "nom_parent": "Diallo Mamadou",
+                "prenoms_parent": "Alpha",
+                "telephone_parent": "+224 625 987 654",
+                "email_parent": "mamadou.diallo@example.com",
+                "accepte_conditions": True
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/pre-register", json=valid_data)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success") and result.get("pre_registration_id"):
+                    self.log_result("pre_registration", "Valid pre-registration", True)
+                    # Store the pre-registration ID for potential cleanup
+                    self.pre_registration_id = result.get("pre_registration_id")
+                else:
+                    self.log_result("pre_registration", "Valid pre-registration", False, "Missing success or pre_registration_id in response")
+            else:
+                self.log_result("pre_registration", "Valid pre-registration", False, f"Status: {response.status_code}, Response: {response.text}")
+                
+        except Exception as e:
+            self.log_result("pre_registration", "Valid pre-registration", False, str(e))
+        
+        # Test 2: Error with existing email (duplicate call)
+        try:
+            duplicate_data = {
+                "nom_complet": "Diallo Aminata",
+                "date_naissance": "2008-05-15",
+                "email": "aminata.diallo@example.com",  # Same email as above
+                "telephone": "+224 628 123 456",
+                "niveau_souhaite": "seconde",
+                "etablissement_actuel": "Collège de Conakry",
+                "nom_parent": "Diallo Mamadou",
+                "prenoms_parent": "Alpha",
+                "telephone_parent": "+224 625 987 654",
+                "email_parent": "mamadou.diallo@example.com",
+                "accepte_conditions": True
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/pre-register", json=duplicate_data)
+            if response.status_code == 400:
+                result = response.json()
+                if "existe déjà" in result.get("detail", "").lower():
+                    self.log_result("pre_registration", "Duplicate email error", True)
+                else:
+                    self.log_result("pre_registration", "Duplicate email error", False, f"Wrong error message: {result.get('detail')}")
+            else:
+                self.log_result("pre_registration", "Duplicate email error", False, f"Expected 400, got {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("pre_registration", "Duplicate email error", False, str(e))
+        
+        # Test 3: Error with accepte_conditions = false
+        try:
+            invalid_conditions_data = {
+                "nom_complet": "Camara Fatoumata",
+                "date_naissance": "2009-03-20",
+                "email": "fatoumata.camara@example.com",
+                "telephone": "+224 629 456 789",
+                "niveau_souhaite": "premiere",
+                "etablissement_actuel": "Lycée de Kankan",
+                "nom_parent": "Camara Ibrahima",
+                "prenoms_parent": "Saliou",
+                "telephone_parent": "+224 626 111 222",
+                "email_parent": "ibrahima.camara@example.com",
+                "accepte_conditions": False  # Invalid
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/pre-register", json=invalid_conditions_data)
+            if response.status_code == 422:  # Validation error
+                result = response.json()
+                if "conditions" in str(result).lower():
+                    self.log_result("pre_registration", "Invalid conditions error", True)
+                else:
+                    self.log_result("pre_registration", "Invalid conditions error", False, f"Wrong validation error: {result}")
+            else:
+                self.log_result("pre_registration", "Invalid conditions error", False, f"Expected 422, got {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("pre_registration", "Invalid conditions error", False, str(e))
+        
+        # Test 4: Error with invalid niveau_souhaite
+        try:
+            invalid_niveau_data = {
+                "nom_complet": "Bah Mamadou",
+                "date_naissance": "2007-12-10",
+                "email": "mamadou.bah@example.com",
+                "telephone": "+224 630 789 123",
+                "niveau_souhaite": "invalid_niveau",  # Invalid niveau
+                "etablissement_actuel": "Collège de Labé",
+                "nom_parent": "Bah Ousmane",
+                "prenoms_parent": "Thierno",
+                "telephone_parent": "+224 627 333 444",
+                "email_parent": "ousmane.bah@example.com",
+                "accepte_conditions": True
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/pre-register", json=invalid_niveau_data)
+            if response.status_code == 422:  # Validation error
+                result = response.json()
+                if "niveau" in str(result).lower():
+                    self.log_result("pre_registration", "Invalid niveau error", True)
+                else:
+                    self.log_result("pre_registration", "Invalid niveau error", False, f"Wrong validation error: {result}")
+            else:
+                self.log_result("pre_registration", "Invalid niveau error", False, f"Expected 422, got {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("pre_registration", "Invalid niveau error", False, str(e))
+        
+        # Test 5: Verify database entry creation (we can't directly access DB, but we can test the response structure)
+        try:
+            unique_data = {
+                "nom_complet": "Touré Aissatou",
+                "date_naissance": "2008-08-25",
+                "email": f"aissatou.toure.{uuid.uuid4().hex[:6]}@example.com",  # Unique email
+                "telephone": "+224 631 555 666",
+                "niveau_souhaite": "terminale",
+                "etablissement_actuel": "Lycée de Kindia",
+                "nom_parent": "Touré Sekou",
+                "prenoms_parent": "Ahmed",
+                "telephone_parent": "+224 628 777 888",
+                "email_parent": f"sekou.toure.{uuid.uuid4().hex[:6]}@example.com",
+                "accepte_conditions": True
+            }
+            
+            response = self.session.post(f"{API_BASE}/auth/pre-register", json=unique_data)
+            if response.status_code == 200:
+                result = response.json()
+                required_fields = ["success", "message", "pre_registration_id", "details"]
+                has_all_fields = all(field in result for field in required_fields)
+                
+                if has_all_fields and result.get("success") == True:
+                    self.log_result("pre_registration", "Database entry structure", True)
+                else:
+                    missing_fields = [field for field in required_fields if field not in result]
+                    self.log_result("pre_registration", "Database entry structure", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_result("pre_registration", "Database entry structure", False, f"Status: {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("pre_registration", "Database entry structure", False, str(e))
+    
     def print_summary(self):
         """Print test summary"""
         print("\n" + "="*60)
