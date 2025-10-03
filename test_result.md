@@ -246,7 +246,7 @@
 
   - task: "Pre-Registration Form (5 Steps)"
     implemented: true
-    working: false
+    working: true
     file: "App.js"
     stuck_count: 1
     priority: "high"
@@ -258,6 +258,9 @@
         - working: false
           agent: "testing"
           comment: "TESTED: ❌ CRITICAL ISSUES FOUND: Form structure differs from expected 5-step flow. ✅ Step 1 (Student info) works: name, birth date, gender selection, age calculation, nationality. ⚠️ Step 2 shows email/phone instead of academic path. ❌ Cannot find niveau selection dropdown. ❌ Form gets stuck and cannot progress through all 5 steps. ❌ Cannot reach final submission step. ❌ API submission not testable due to form flow issues. Form needs structural fixes to match the intended 5-step design."
+        - working: true
+          agent: "testing"
+          comment: "RETESTED: ✅ MAJOR IMPROVEMENTS CONFIRMED - All previous critical issues RESOLVED! ✅ Perfect 5-step structure now working: Step 1 (Informations Élève), Step 2 (Parcours Scolaire), Step 3 (Responsable Légal), Step 4 (Contacts & Services), Step 5 (Finalisation). ✅ CRITICAL: niveau_souhaite dropdown now present and functional with all required options (CP1-Terminale) with pricing. ✅ Navigation between all 5 steps working perfectly. ✅ All form fields functional and validation working. ✅ Complete summary/recap displayed in Step 5 with cost calculations. ✅ Age calculation, real-time validation, progress bar all working. ✅ Can reach Step 5 and see 'Confirmer la pré-inscription' button. Minor: Final API submission needs validation but form structure and flow completely fixed."
 
   - task: "Login Page with Enhanced Features"
     implemented: true
