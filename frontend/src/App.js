@@ -41,10 +41,10 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
             {/* Logo */}
             <div className="flex items-center cursor-pointer" onClick={() => scrollToSection('accueil')}>
               <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mr-3 shadow-lg">
-                <span className="text-white font-bold text-lg">LSE</span>
+                <span className="text-white font-bold text-lg">GSNC</span>
               </div>
               <div>
-                <span className="text-2xl font-bold text-blue-800">Lycée Sainte-Étoile</span>
+                <span className="text-2xl font-bold text-blue-800">Groupe scolaire Naby-camara</span>
                 <p className="text-xs text-gray-600">Excellence • Innovation • Réussite</p>
               </div>
             </div>
@@ -94,7 +94,7 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
                   <h1 className="text-5xl lg:text-6xl font-bold mb-4">
                     Bienvenue au<br />
                     <span className="bg-gradient-to-r from-green-400 to-blue-300 bg-clip-text text-transparent">
-                      Lycée Sainte-Étoile
+                      Groupe scolaire Naby-camara
                     </span>
                   </h1>
                 </div>
@@ -158,7 +158,7 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
       <section id="apropos" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">À Propos du Lycée Sainte-Étoile</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">À Propos du Groupe scolaire Naby-camara</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Un établissement d'excellence qui forme les leaders de demain avec des valeurs solides et une éducation de qualité internationale.
             </p>
@@ -367,8 +367,8 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
                   <div>
                     <h4 className="font-semibold mb-1">Email</h4>
                     <p className="text-blue-100">
-                      contact@lycee-sainte-etoile.gn<br />
-                      direction@lycee-sainte-etoile.gn
+                      contact@Groupe-scolaire-Naby-camara.gn<br />
+                      direction@Groupe-scolaire-Naby-camara.gn
                     </p>
                   </div>
                 </div>
@@ -450,9 +450,9 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center mb-4">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mr-3">
-                  <span className="text-white font-bold">LSE</span>
+                  <span className="text-white font-bold">GSNC</span>
                 </div>
-                <span className="text-xl font-bold">Lycée Sainte-Étoile</span>
+                <span className="text-xl font-bold">Groupe scolaire Naby-camara</span>
               </div>
               <p className="text-gray-400 text-sm mb-4">
                 Formant les leaders de demain avec excellence et humanité depuis 2009.
@@ -495,14 +495,14 @@ const PublicLandingPage = ({ onNavigateToLogin, onNavigateToPreRegistration }) =
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>📍 Kaloum, Conakry</li>
                 <li>📞 +224 664 123 456</li>
-                <li>✉️ contact@lycee-sainte-etoile.gn</li>
+                <li>✉️ contact@Groupe-scolaire-Naby-camara.gn</li>
                 <li>🕒 Lun-Ven: 7h30-17h30</li>
               </ul>
             </div>
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 Lycée Sainte-Étoile. Tous droits réservés. | Développé avec ❤️ pour l'éducation guinéenne</p>
+            <p>&copy; 2024 Groupe scolaire Naby-camara. Tous droits réservés. | Développé avec ❤️ pour l'éducation guinéenne</p>
           </div>
         </div>
       </footer>
